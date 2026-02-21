@@ -8,6 +8,10 @@
 .include "printAndDisplay.asm"
 .include "displayBoard.asm"
 
+# TODO repaint option for user (rp)
+# TODO home option for user (h) + are you sure msg
+# TODO wasd Player 1 ijkl Player 2
+
 .data
 board:	# 0x10010000
 	.space 262144 # reserve 256 px * 256 px * 4 bytes each

@@ -63,16 +63,11 @@ text_set_up:
 	.ascii	"        bitmap display box, and the KEYBOARD input box (bottom box).\n\n"
 	.ascii	"        From now on, read the instructions in the DISPLAY box and enter all\n"
 	.ascii	"        inputs into the KEYBOARD input box. Have fun playing!\n\n"
-	.ascii	"############################################################################\n\n"
+	.asciiz	"############################################################################\n\n"
 
 .include "boardData.asm"
 
-# TODO - add note that it's important to open bitmap first OR take input to start drawing**
-
 .text
-.globl main
-
-main:
 	# start program w/ terminal instructions
 	print_text (text_set_up)
 

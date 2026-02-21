@@ -70,6 +70,9 @@ text_set_up:
 # TODO - add note that it's important to open bitmap first OR take input to start drawing**
 
 .text
+.globl main
+
+main:
 	# start program w/ terminal instructions
 	print_text (text_set_up)
 

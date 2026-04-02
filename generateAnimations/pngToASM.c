@@ -21,7 +21,7 @@
 const char* HEADING_COMMENT_BOX = "#-----------------------------------------------------------------------\n";
 
 // buffer to hold filenames
-char filenameBuffer[200];
+char filename_buffer[300];
 
 // Image struct - image + metadata
 typedef struct {
@@ -225,7 +225,7 @@ int main(int argc, char* argv[]) {
 	// read options
 	char c;
 	char* dir = NULL;
-	bool useAlpha = true;
+	bool use_alpha = true;
 	while ((c = getopt(argc, argv, "d:A") != -1)) {
 		printf("Getting next opt: c = %c\n", c);
 		switch(c) {
@@ -233,7 +233,7 @@ int main(int argc, char* argv[]) {
 				dir = optarg;
 				break;
 			case 'A':
-				useAlpha = false;
+				use_alpha = false;
 				break;
 			case '?':
 				fprintf(stderr, "%c: invalid option\n", optopt);
@@ -247,20 +247,20 @@ int main(int argc, char* argv[]) {
 		// parse command line options from optind
 		for (int i = optind; i < argc; i++) {
 			// retrieve image associated with the file
-			Image img = getPNGAsArray(argv[i], useAlpha);
+			Image img = getPNGAsArray(argv[i], use_alpha);
 
 			// come up with filename with asm extension
-			strcpy(filenameBuffer, argv[i]);
-			char* dot = strchr(filenameBuffer, '.');
+			strcpy(filename_buffer, argv[i]);
+			char* dot = strchr(filename_buffer, '.');
 			if (!dot)
-				dot = strchr(filenameBuffer, '\0') - 1;
+				dot = strchr(filename_buffer, '\0') - 1;
 			strcpy(dot + 1, "asm");
 			
 			// write image to file
-			if (generateASM(img, filenameBuffer, argv[i]))
-				printf("Created %s\n", filenameBuffer);
+			if (generateASM(img, filename_buffer, argv[i]))
+				printf("Created %s\n", filename_buffer);
 			else
-				fprintf(stderr, "Failed to create %s\n", filenameBuffer);
+				fprintf(stderr, "Failed to create %s\n", filename_buffer);
 		}
 	}
 

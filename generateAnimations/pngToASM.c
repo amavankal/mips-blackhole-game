@@ -16,6 +16,14 @@
 #include <png.h> // png_structp, png_infop, etc..
 #include <stdbool.h> // booleans
 #include <unistd.h> // getopt
+#include <getopt.h> // getopt_long
+
+// options
+static struct option long_options[] = {
+	{"src-dir", required_argument, 0, 'd'},
+	{"out-dir", required_argument, 0, 'o'},
+	{"no-alpha", no_argument, 0, 'A'}
+};
 
 // constant for files
 const char* HEADING_COMMENT_BOX = "#-----------------------------------------------------------------------\n";
@@ -218,22 +226,26 @@ Image getPNGAsArray(char* filename, bool alpha) {
 	return img;
 }
 
-// take in files to read
-// -A means no alpha values. uses alpha values by defauly
-// Usage: pngToAsm [-A] [-d pngDir | png1.png ...]
+
+// Usage: pngToAsm [-A] [-o outdir] -d pngDir | png1.png ...
 int main(int argc, char* argv[]) {
+	// variables to hold option data
+	char* srcdir = NULL; char* outdir = NULL;
+	bool use_alpha = true;
+
 	// read options
 	char c;
-	char* dir = NULL;
-	bool use_alpha = true;
-	while ((c = getopt(argc, argv, "d:A") != -1)) {
+	while ((c = getop_long(argc, argv, "Ao:d:", long_options, NULL) != -1)) {
 		printf("Getting next opt: c = %c\n", c);
 		switch(c) {
-			case 'd': 
-				dir = optarg;
-				break;
 			case 'A':
 				use_alpha = false;
+				break;
+			case 'd': 
+				srcdir = optarg;
+				break;
+			case 'o':
+				outdir = optarg;
 				break;
 			case '?':
 				fprintf(stderr, "%c: invalid option\n", optopt);
@@ -241,7 +253,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// process data
-	if (dir) {
+	if (srcdir) {
 		// read directory contents
 	} else {
 		// parse command line options from optind

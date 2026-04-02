@@ -6,8 +6,7 @@
  *
  *	TODO: implement diffs
  *	TODO: implement reading numbered frames in a directory
- *	TODO: decide how to organize animation frames
- *
+ *	TODO: decide how to organize animation framesx
  */
 
 #include <stdio.h>	// fopen,fprintf
@@ -18,12 +17,19 @@
 #include <unistd.h> // getopt
 #include <getopt.h> // getopt_long
 #include <sys/stat.h> // mkdir
+#include <dirent.h> // opendir, dirent*, scandir
+#include <errno.h> // errno
+#include <ctype.h> // isdigit
 
 // options
 static struct option long_options[] = {
 	{"src-dir", required_argument, 0, 'd'},
 	{"out-dir", required_argument, 0, 'o'},
-	{"no-alpha", no_argument, 0, 'A'}
+	{"make-diffs-file", required_argument, 0, 'm'},
+	{"no-alpha", no_argument, 0, 'A'},
+	{"usage", no_argument, 0, 0},
+	{"help", no_argument, 0, 0}, // alias for usage
+	{0, 0, 0, 0}
 };
 
 // constant for files
@@ -75,6 +81,8 @@ bool checkContinue(char* filename) {
  * 		of words under the label frame: in an ASM file with the 
  * 		given filename, checking with the user if it should 
  * 		continue if the file already exists.
+ * 
+ * 		Prints error if issue opening filename to write.
  *	@param img
  *	@param filename
  *	@return whether or not an ASM file was generated
@@ -88,8 +96,10 @@ bool generateASM(Image img, char* filename, char* imagename) {
 	FILE* fp = fopen(filename, "w");
 
 	// check that file was opened
-	if (!fp)
+	if (!fp) {
+		fprintf(stderr, "Error opening %s for writing: %s\n", filename, strerror(errno));
 		return false;
+	}
 
 	// print header comment & data directive + frame label
 	fprintf(fp, "%s# %s holds image data for %s\n%s\n", 
@@ -178,9 +188,11 @@ Image generateImage(png_structp png, png_infop info, FILE* pngp, char* filename,
 		.pixelsPerRow = rowbytes, .bytesPerPixel = rowbytes / width};
 }
 
-/** generateASM generates an ASM file from the given existant file.
+/** getPNGAsArray returns an Image byte array for a given image.
  *	@return the image from the png as a byte array along with metadata.
  *		The .image needs to be freed by end of program.
+ *
+ * 	Prints errors if read fails.
  */
 Image getPNGAsArray(char* filename, bool alpha) {
 	// intialize bianry file to read, and png_structp
@@ -209,7 +221,7 @@ Image getPNGAsArray(char* filename, bool alpha) {
 	// error handling - libpng uses longjmp if it encounters errors
 	// if an error is encountered it'll read this if statement
 	if (setjmp(png_jmpbuf(png))) {
-		fprintf(stdout, "There was an issue parsing %s with libpng\n", filename);
+		fprintf(stderr, "Issue reading %s\n", filename);
 		goto cleanup;
 	}
 	
@@ -227,17 +239,108 @@ Image getPNGAsArray(char* filename, bool alpha) {
 	return img;
 }
 
+/**	Stores in filename_buffer the resultant ASM filepath for the given 
+ * 		PNG source filepath. If outdir exists, it appends the filename 
+ * 		to that path; if not, it puts the file in the working directory.
+ * 		It also adds an .asm extension to the final filepath.
+ *	@param outdir the path to the output directory to store the resultant 
+ *		file in. If this is null, resultant file is put in working directory.
+ *	@param filepath the path to the source png file to find the .asm path for
+ */
+void storeAsmPath(char* outdir, char* filepath) {
+	// keep track of append position in filename buffer to create filename
+	char* spot = filename_buffer;
 
-// Usage: pngToAsm [-A] [-o outdir] -d pngDir | png1.png ...
+	// determine overall file path for resultant file
+	if (outdir) {
+		// if output directory is given, add it to path
+		strcpy(spot, outdir);
+		spot += strlen(spot);
+
+		// verify / is there: if not, add it
+		if (*(spot - 1) != '/')
+			*spot++ = '/';
+		
+		// if there's a previous path, add only filename part
+		// else add whole filename
+		char* lastslash = strrchr(filepath, '/');
+		if (lastslash)
+			strcpy(spot, lastslash + 1);
+		else
+			strcpy(spot, filepath);
+		spot += strlen(spot);
+	} else {
+		// if no outdir given, create new file in working directory
+		// that is, just remove any previous paths.
+		char* lastslash = strrchr(filepath, '/');
+		if (lastslash)
+			strcpy(spot, lastslash + 1);
+		else
+			strcpy(spot, filepath);
+		spot += strlen(spot);
+	}
+	
+	// add .asm extension to file; replace if can; else just add extension
+	spot = strrchr(filename_buffer, '.');
+	if (!spot) {
+		spot = strchr(filename_buffer, '\0');
+		*spot = '.';
+	}
+
+	strcpy(spot + 1, "asm");
+}
+
+/** Creates given directory if it's valid and doesn't alr exist
+ *	@param dir directory to potentially create. If NULL, does nothing.
+ */
+void makeDir(char* dir) {
+	// if output directory is given, create it
+	if (dir) {
+		if (mkdir(dir, 0755) == 0)
+			printf("Created %s directory successfully.\n", dir);
+		else if (errno != EEXIST) {
+			fprintf(stderr, "Failed to create %s directory: %s\n", dir, strerror(errno));
+			exit(1);
+		}
+	}
+}
+
+int filesonly(const struct dirent* entry) {
+	return entry->d_type == DT_REG ? 1 : 0;
+}
+
+int natStrCmp(const char *a, const char *b) {
+	// while 2 chars are comparable
+    while (*a && *b) {
+		// if the chars are digits get rest of number 
+		//	and compare whole numbers
+        if (isdigit(*a) && isdigit(*b)) {
+            int num1 = strtol(a, (char**)&a, 10); // will move a to next non-int
+            int num2 = strtol(b, (char**)&b, 10); // will move b to next non-int
+            if (num1 != num2) 
+				return num1 - num2;
+        } else // regular alphabetic compare
+            if (*a++ != *b++)	
+				return *a - *b;
+    }
+
+	// if 1 or more of chars is null--returns longer string (ex: ba vs. b)
+    return *a - *b;
+}
+
+int versionsort(const struct dirent** a, const struct dirent** b) {
+	return natStrCmp((*a)->d_name, (*b)->d_name);
+}
+
+// Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...
 int main(int argc, char* argv[]) {
 	// variables to hold option data
 	char* srcdir = NULL; char* outdir = NULL;
-	bool use_alpha = true;
+	bool use_alpha = true; bool make_diffs = false;
 
 	// read options
-	char c;
+	int c;
 	while ((c = getopt_long(argc, argv, "Ao:d:", long_options, NULL)) != -1) {
-		printf("next opt: c = %c\n", c);
 		switch(c) {
 			case 'A':
 				use_alpha = false;
@@ -248,75 +351,93 @@ int main(int argc, char* argv[]) {
 			case 'o':
 				outdir = optarg;
 				break;
+			case 'm':
+				make_diffs = true;
+				break;
+			case 0:
+				printf("Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...\n");
+				exit(0);
 			case '?':
 				fprintf(stderr, "%c: invalid option\n", optopt);
 		}
 	}
 
-	// if output directory is given, create it
-	if (outdir) {
-		if (mkdir(outdir, 0755) == 0)
-			printf("Created %s directory successfully.\n", outdir);
-		else {
-			fprintf(stderr, "Failed to create %s directory. Aborting.\n", outdir);
-			exit(1);
-		}
-	}
-
 	// convert given pngs to .asm data files
 	if (srcdir) {
-		// read directory contents
-	} else {
+		// open directory
+		DIR* dir = opendir(srcdir);
+
+		if (!dir) {
+			fprintf(stderr, "Failed to open %s directory for reading: %s\n", srcdir, strerror(errno));
+			exit(1);
+		}
+
+		// if output directory is given, create it
+		makeDir(outdir);
+
+		// use scandir to get the ordered directory contents
+		struct dirent** entries; // must free later
+		int num_files = scandir(srcdir, &entries, filesonly, versionsort);
+
+		if (num_files < 0) {
+			fprintf(stderr, "Error reading %s: %s", srcdir, strerror(errno));
+			exit(1);
+		} else {
+			for (int n = 0; n < num_files; n++) {
+				// use filename_buffer to store full filepath for directory entries
+				strcpy(filename_buffer, srcdir);
+				if (*(filename_buffer + strlen(filename_buffer) - 1) != '/')
+					strncat(filename_buffer, "/", 299 - strlen(filename_buffer));
+				strncat(filename_buffer, entries[n]->d_name, 299 - strlen(filename_buffer));
+
+				// try to retrieve image associated with filepath
+				Image img = getPNGAsArray(filename_buffer, use_alpha);
+
+				// if img was not read correctly, continue loop
+				if (img.image == NULL)
+					continue;
+
+				// fill filename buffer with .asm filepath
+				storeAsmPath(outdir, entries[n]->d_name);
+
+				// write image to file
+				if (generateASM(img, filename_buffer, entries[n]->d_name))
+					printf("Created %s\n", filename_buffer);
+				else // either user chose not to overwrite, or creation error
+					fprintf(stderr, "Failed to create %s\n", filename_buffer);
+
+				// cleanup
+				free(img.image);
+				free(entries[n]);
+			}
+
+			// free entries pointer (it now points to a bunch of freed pointers)
+			free(entries);
+		}
+	} else { // read files from command line
+		// if output directory is given, create it
+		makeDir(outdir);
+
 		// parse command line options from optind
 		for (int i = optind; i < argc; i++) {
-			// keep track of append position in filename buffer to create filename
-			char* spot = filename_buffer;
-
-			// determine file path for resultant file
-			if (outdir) {
-				// if output directory is given, add it to path
-				strcpy(spot, outdir);
-				spot += strlen(spot);
-
-				// verify / is there: if not, add it
-				if (*(spot - 1) != '/')
-					*spot++ = '/';
-				
-				// if there's a previous path, add only filename part
-				// else add whole filename
-				char* lastslash = strrchr(argv[i], '/');
-				if (lastslash)
-					strcpy(spot, lastslash + 1);
-				else
-					strcpy(spot, argv[i]);
-				spot += strlen(spot);
-			} else {
-				// if no outdir given, create new file in working directory
-				// that is, just remove any previous paths.
-				char* lastslash = strrchr(argv[i], '/');
-				if (lastslash)
-					strcpy(spot, lastslash + 1);
-				else
-					strcpy(spot, argv[i]);
-				spot += strlen(spot);
-			}
-			
-			// add .asm extension to file; replace if can; else just add extension
-			spot = strrchr(filename_buffer, '.');
-			if (!spot) {
-				spot = strchr(filename_buffer, '\0');
-				*spot = '.';
-			}
-			strcpy(spot + 1, "asm");
-			
 			// retrieve image associated with the file
 			Image img = getPNGAsArray(argv[i], use_alpha);
+
+			// if img was not read correctly, continue loop
+			if (img.image == NULL)
+				continue;
+
+			// fill filename buffer with .asm filepath, if possible
+			storeAsmPath(outdir, argv[i]);
 
 			// write image to file
 			if (generateASM(img, filename_buffer, argv[i]))
 				printf("Created %s\n", filename_buffer);
 			else
 				fprintf(stderr, "Failed to create %s\n", filename_buffer);
+
+			// cleanup
+			free(img.image);
 		}
 	}
 

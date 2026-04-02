@@ -222,6 +222,47 @@ Image getPNGAsArray(char* filename, bool alpha) {
 // -A means no alpha values. uses alpha values by defauly
 // Usage: pngToAsm [-A] [-d pngDir | png1.png ...]
 int main(int argc, char* argv[]) {
+	// read options
+	char c;
+	char* dir = NULL;
+	bool useAlpha = true;
+	while ((c = getopt(argc, argv, "d:A") != -1)) {
+		printf("Getting next opt: c = %c\n", c);
+		switch(c) {
+			case 'd': 
+				dir = optarg;
+				break;
+			case 'A':
+				useAlpha = false;
+				break;
+			case '?':
+				fprintf(stderr, "%c: invalid option\n", optopt);
+		}
+	}
+
+	// process data
+	if (dir) {
+		// read directory contents
+	} else {
+		// parse command line options from optind
+		for (int i = optind; i < argc; i++) {
+			// retrieve image associated with the file
+			Image img = getPNGAsArray(argv[i], useAlpha);
+
+			// come up with filename with asm extension
+			strcpy(filenameBuffer, argv[i]);
+			char* dot = strchr(filenameBuffer, '.');
+			if (!dot)
+				dot = strchr(filenameBuffer, '\0') - 1;
+			strcpy(dot + 1, "asm");
+			
+			// write image to file
+			if (generateASM(img, filenameBuffer, argv[i]))
+				printf("Created %s\n", filenameBuffer);
+			else
+				fprintf(stderr, "Failed to create %s\n", filenameBuffer);
+		}
+	}
 
 	return 0;
 }

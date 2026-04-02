@@ -235,8 +235,8 @@ int main(int argc, char* argv[]) {
 
 	// read options
 	char c;
-	while ((c = getop_long(argc, argv, "Ao:d:", long_options, NULL) != -1)) {
-		printf("Getting next opt: c = %c\n", c);
+	while ((c = getopt_long(argc, argv, "Ao:d:", long_options, NULL)) != -1) {
+		printf("next opt: c = %c\n", c);
 		switch(c) {
 			case 'A':
 				use_alpha = false;

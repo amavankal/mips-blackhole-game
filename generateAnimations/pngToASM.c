@@ -17,6 +17,7 @@
 #include <stdbool.h> // booleans
 #include <unistd.h> // getopt
 #include <getopt.h> // getopt_long
+#include <sys/stat.h> // mkdir
 
 // options
 static struct option long_options[] = {
@@ -252,22 +253,65 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	// process data
+	// if output directory is given, create it
+	if (outdir) {
+		if (mkdir(outdir, 0755) == 0)
+			printf("Created %s directory successfully.\n", outdir);
+		else {
+			fprintf(stderr, "Failed to create %s directory. Aborting.\n", outdir);
+			exit(1);
+		}
+	}
+
+	// convert given pngs to .asm data files
 	if (srcdir) {
 		// read directory contents
 	} else {
 		// parse command line options from optind
 		for (int i = optind; i < argc; i++) {
+			// keep track of append position in filename buffer to create filename
+			char* spot = filename_buffer;
+
+			// determine file path for resultant file
+			if (outdir) {
+				// if output directory is given, add it to path
+				strcpy(spot, outdir);
+				spot += strlen(spot);
+
+				// verify / is there: if not, add it
+				if (*(spot - 1) != '/')
+					*spot++ = '/';
+				
+				// if there's a previous path, add only filename part
+				// else add whole filename
+				char* lastslash = strrchr(argv[i], '/');
+				if (lastslash)
+					strcpy(spot, lastslash + 1);
+				else
+					strcpy(spot, argv[i]);
+				spot += strlen(spot);
+			} else {
+				// if no outdir given, create new file in working directory
+				// that is, just remove any previous paths.
+				char* lastslash = strrchr(argv[i], '/');
+				if (lastslash)
+					strcpy(spot, lastslash + 1);
+				else
+					strcpy(spot, argv[i]);
+				spot += strlen(spot);
+			}
+			
+			// add .asm extension to file; replace if can; else just add extension
+			spot = strrchr(filename_buffer, '.');
+			if (!spot) {
+				spot = strchr(filename_buffer, '\0');
+				*spot = '.';
+			}
+			strcpy(spot + 1, "asm");
+			
 			// retrieve image associated with the file
 			Image img = getPNGAsArray(argv[i], use_alpha);
 
-			// come up with filename with asm extension
-			strcpy(filename_buffer, argv[i]);
-			char* dot = strchr(filename_buffer, '.');
-			if (!dot)
-				dot = strchr(filename_buffer, '\0') - 1;
-			strcpy(dot + 1, "asm");
-			
 			// write image to file
 			if (generateASM(img, filename_buffer, argv[i]))
 				printf("Created %s\n", filename_buffer);

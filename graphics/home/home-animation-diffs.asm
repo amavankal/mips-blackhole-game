@@ -12,6 +12,7 @@ home_offsets:
 	.word home_5_offsets,  home_6_offsets,  home_7_offsets,  home_8_offsets
     .word home_9_offsets,  home_10_offsets, home_11_offsets, home_12_offsets
     .word home_13_offsets, home_14_offsets, home_0_offsets
+    .word -1
 
 home_colors:
 	.word home_1_colors,  home_2_colors,  home_3_colors,  home_4_colors

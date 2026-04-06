@@ -7,7 +7,7 @@
 .globl arrow_colors
 
 arrow_offsets:
-	.word p1_arrow_offsets, p2_arrow_offsets, p3_arrow_offsets
+	.word exit_arrow_offsets, p1_arrow_offsets, p2_arrow_offsets
 	.word 0
 
 arrow_colors:
@@ -35,7 +35,7 @@ p2_arrow_offsets:
 	.word        43897,      43898,      43899,      43900,      43901
 	.word        44153,      44154,      44155,      44156
 	.word        44409,      44410,      44411
-p3_arrow_offsets:
+exit_arrow_offsets:
 	.word        47526,      47527,      47528
 	.word        47782,      47783,      47784,      47785
 	.word        48038,      48039,      48040,      48041,      48042

@@ -95,3 +95,7 @@ main:
     jal home
 
     # user's choice is stored in $v0-- make decision based on that
+
+    # exit termination
+    li $v0, 10
+    syscall

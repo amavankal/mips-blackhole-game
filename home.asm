@@ -1,11 +1,19 @@
 #-----------------------------------------------------------------------
 # home.asm
-# Description: draws home animation and reads user input
+# Description: Contains home subroutine, which animates the home frame
+#   and processes user input to the MMIO simulator. Returns the user's
+#   selection (0 = exit, 1 = 1 player, or 2 = 2 player) in $v0.
 #
-# Uses data in home-frame-1.asm and home-animation-diffs.asm:
+# Uses data in graphics/home/home-frame-1.asm and 
+#   graphics/home/home-animation-diffs.asm:
 #       home_base_frame, home_offsets, and home_colors
-# Uses data in arrows.asm:
+# Uses data in graphics/home/arrows.asm:
 #       arrow_offsets & arrow_colors
+#
+# Subroutines:
+#   home (global): animates home animation and processes user input
+#   draw_arrow: helper subroutine for home. draws user selection arrow
+#   erase_arrow: helper subroutine for home. erases user selection arrow
 #
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
@@ -15,7 +23,15 @@
 
 .data
 frame_lag:
-    .word 150
+    .word 10
+
+## user input controls
+up:
+    .ascii "wWaA"
+down:
+    .ascii "sSdD"
+go:
+    .ascii " \n\t"
 
 ### HOME playback loop - run animations / read input ###
 # no arguments
@@ -27,16 +43,20 @@ frame_lag:
 
 home:
     ## subroutine prologue -- set up stack frame
-    addi $sp, $sp -16
-    sw $fp, 12($sp)
-    sw $ra, 8($sp)
-    sw $s0, 4($sp)
-    sw $s1, 0($sp)
+    addi $sp, $sp -24
+    sw $fp, 20($sp)
+    sw $ra, 16($sp)
+    sw $s0, 12($sp)
+    sw $s1, 8($sp)
+    sw $s2, 4($sp)
+    sw $s3, 0($sp)
     move $fp, $sp
 
     ## home variables
     li $s0, 1       # $s0 will hold the user's current selection (where to paint arrow)
+    li $s2, 1       # $s2 will hold user's old selection (for erasing)
     li $s1, 0       # $s1 will hold the index of the animation frame to draw
+    li $s3, 1       # $s3 will hold poll counter
 
     ## draw base frame
     la $t0, graphics_board    # where to write data
@@ -60,21 +80,149 @@ exit_draw_base_frame_loop:
     move $a0, $s0
     jal draw_arrow
 
-    ##
+    # sleep for 1 cycle (doesn't read input but that's okay)
+    li $v0, 32
+    lw $a0, frame_lag
+    syscall
+
+    ### HOME loop: go through animation frames, and see if user input exists
+home_loop:
+    ## check if there's user input. if there is, process it
+    ## if user hits enter, load results into $v0
+    # read control register
+    li $t0, 0xFFFF0000  # $t0 holds address of keyboard control register
+    lw $t0, 0($t0)      # read control bit
+    andi $t0, $t0, 1    # isolate control bit
+    beq $t0, $zero, check_update_frame       # if no input, update frame
+
+    # read input
+    li $t0, 0xFFFF0004
+    lw $a0, 0($t0)
+
+    # check if input is enter character
+    jal is_go_character
+    bgtz $v0, exit_home_loop    # if > 0 (1), exit loop
+
+    # check if input is up character
+    jal is_up_character
+    beqz $v0, check_down    # if not up character, check if down
+
+    move $s2, $s0           # store old selection in $s2
+    addi $s0, $s0, -1       # decrement user selection $s0
+    
+    # circle around if $s0 goes below 0
+    bgez $s0, check_update_frame
+    li $s0, 2
+
+check_down:    
+    # check if input is down character
+    jal is_down_character
+    beqz $v0, check_update_frame  # if not down character, continue
+
+    move $s2, $s0               # store old selection in $s2
+    addi $s0, $s0, 1            # increment user selection
+
+    # circle around if $s0 goes above 2
+    li $t0, 3
+    blt $s0, $t0, check_update_frame
+    li $s0, 0
+
+check_update_frame:
+    # increment poll counter
+    addi $s3, $s3, 1
+    li $t0, 16
+    blt $s3, $t0, continue_check_update_frame
+
+    li $s3, 1
+
+continue_check_update_frame:
+    ### only update frame if poll counter is 15
+    li $t0, 15
+    beq $s3, $t0, update_frame
+
+    # not updating frame, so sleep
+    li $v0, 32
+    lw $a0, frame_lag
+    syscall
+
+    j home_loop
+
+update_frame:
+    ## draw next frame
+    la $t0, home_offsets
+    sll $t2, $s1, 2     # get word offset for animation frame
+    add $t0, $t0, $t2   # address of address of next offset
+    lw $t0, 0($t0)      # $t0: address of next offset
+
+    la $t1, home_colors
+    add $t1, $t1, $t2   # address of address of next color
+    lw $t1, 0($t1)      # $t1: address of next color
+
+draw_updates_loop:
+    lw $t2, 0($t0)      # next offset
+    bltz $t2, exit_draw_updates_loop    # exit if last offset
+
+    sll $t2, $t2, 2     # convert next offset to word offset
+    lw $t3, 0($t1)      # next color
+
+    # store color @ offset
+    sw $t3, graphics_board($t2)
+
+    # increment address of next offset + address of next color
+    addi $t0, $t0, 4
+    addi $t1, $t1, 4
+
+    # loop
+    j draw_updates_loop
+
+exit_draw_updates_loop:
+    # increment $s1 (frame index)
+    addi $s1, $s1, 1
+
+    # $s1 loops back to 0 if it reaches 15
+    li $t0, 15
+    blt $s1, $t0, continue_update_frame
+    li $s1, 0
+
+continue_update_frame:
+    ## draw arrow
+    beq $s2, $s0, skip_arrow_update
+
+    move $a0, $s2
+    jal erase_arrow
+    move $a0, $s0
+    jal draw_arrow
+    
+skip_arrow_update:
+    ## sleep
+    li $v0, 32
+    lw $a0, frame_lag
+    syscall
+
+    ## loop
+    j home_loop
+
+exit_home_loop:
+    ## update $v0 with $so selection
+    move $v0, $s0
 
     ## subroutine epilogue - take down stack frame
     move $sp, $fp
-    lw $s1, 0($sp)
-    lw $s0, 4($sp)
-    lw $ra, 8($sp)
-    lw $fp, 12($sp)
-    addi $sp, $sp, 16
+    lw $s3, 0($sp)
+    lw $s2, 4($sp)
+    lw $s1, 8($sp)
+    lw $s0, 12($sp)
+    lw $ra, 16($sp)
+    lw $fp, 20($sp)
+    addi $sp, $sp, 24
 
     ## exit subroutine
     jr $ra
 
 
+############################
 #### helper subroutines ####
+############################
 
 ### DRAW arrow ###
 # $a0 - user selection - 0 (exit), 1 (1 player), or 2 (2 player)
@@ -131,12 +279,100 @@ erase_arrow_loop:
     # store the color value on the board
     sw $t3, graphics_board($t2)
 
-    # increment arrow drawing variables
+    # increment arrow erasing variables
     addi $t0, $t0, 4
-    addi $t1, $t1, 4
 
     # loop
     j erase_arrow_loop
 
 exit_erase_arrow_loop:
+    jr $ra
+
+### check if character is one of the go characters ###
+# $a0 - character to check
+# $v0 - 0 if false, 1 if true
+is_go_character:
+    # store go address in $t0
+    la $t0, go
+
+    # check if it's a space
+    lb $t1, 0($t0)
+    beq $a0, $t1, matches_go
+
+    # check if it's a newline
+    lb $t1, 1($t0)
+    beq $a0, $t1, matches_go
+
+    # check if it's a tab
+    lb $t1, 2($t0)
+    beq $a0, $t1, matches_go
+
+    # no match
+    li $v0, 0
+    jr $ra
+
+matches_go: # there is a match
+    li $v0, 1
+    jr $ra
+
+### check if character is one of the up characters ###
+# $a0 - character to check
+# $v0 - 0 if false, 1 if true
+is_up_character:
+    # store up address in $t0
+    la $t0, up
+
+    # check if it's "w"
+    lb $t1, 0($t0)
+    beq $a0, $t1, matches_up
+
+    # check if it's "W"
+    lb $t1, 1($t0)
+    beq $a0, $t1, matches_up
+
+    # check if it's "a"
+    lb $t1, 2($t0)
+    beq $a0, $t1, matches_up
+
+    # check if it's "A"
+    lb $t1, 3($t0)
+    beq $a0, $t1, matches_up
+
+    # no match
+    li $v0, 0
+    jr $ra
+
+matches_up: # there is a match
+    li $v0, 1
+    jr $ra
+
+### check if character is one of the down characters ###
+# $a0 - character to check
+# $v0 - 0 if false, 1 if true
+is_down_character:
+    # store down address in $t0
+    la $t0, down
+
+    # check if it's "s"
+    lb $t1, 0($t0)
+    beq $a0, $t1, matches_down
+
+    # check if it's "S"
+    lb $t1, 1($t0)
+    beq $a0, $t1, matches_down
+
+    # check if it's "d"
+    lb $t1, 2($t0)
+    beq $a0, $t1, matches_down
+
+    # check if it's "D"
+    lb $t1, 3($t0)
+    beq $a0, $t1, matches_down
+
+    # no match
+    li $v0, 0
+    jr $ra
+
+matches_down: # there is a match
+    li $v0, 1
     jr $ra

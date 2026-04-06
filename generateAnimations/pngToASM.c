@@ -20,6 +20,7 @@
 #include <dirent.h> // opendir, dirent*, scandir
 #include <errno.h> // errno
 #include <ctype.h> // isdigit
+#include <stdint.h> // uint8_t
 
 // options
 static struct option long_options[] = {
@@ -32,12 +33,6 @@ static struct option long_options[] = {
 	{0, 0, 0, 0}
 };
 
-// constant for files
-const char* HEADING_COMMENT_BOX = "#-----------------------------------------------------------------------\n";
-
-// buffer to hold filenames
-char filename_buffer[300];
-
 // Image struct - image + metadata
 typedef struct {
 	png_bytepp image;
@@ -45,6 +40,24 @@ typedef struct {
 	int pixelsPerRow;
 	int bytesPerPixel;
 } Image;
+
+// Pixel struct - offset from image base + new color
+typedef struct {
+	int offset;
+	uint8_t R;
+	uint8_t G;
+	uint8_t B;
+} Pixel;
+
+// constant for files
+const char* HEADING_COMMENT_BOX = "#-----------------------------------------------------------------------\n";
+
+// buffer to hold filenames
+char filename_buffer[300];
+
+// buffer to hold diffs
+Pixel diffs_buffer[65536];
+int num_diffs;
 
 /** Helper method for generateASM that determines whether the
  * 		given file can be overwritten by prompting the user
@@ -105,7 +118,7 @@ bool generateASM(Image img, char* filename, char* imagename) {
 	fprintf(fp, "%s# %s holds image data for %s\n%s\n", 
 		HEADING_COMMENT_BOX, filename, imagename, HEADING_COMMENT_BOX);
 	fprintf(fp, ".data\n\n");
-	fprintf(fp, "frame:\n"); // TODO
+	fprintf(fp, "%s:\n", filename); // TODO
 
 	// print data rows
 	for (int r = 0; r < img.height; r++) {
@@ -124,8 +137,8 @@ bool generateASM(Image img, char* filename, char* imagename) {
 				img.image[r][p * img.bytesPerPixel + 1], 
 				img.image[r][p * img.bytesPerPixel + 2]);
 			
-			// if last in group of 8, print \n, else print ,
-			if (p % 8 == 7)
+			// if last in group of 8 or last in row, print \n; else print ,
+			if (p % 8 == 7 || p == img.pixelsPerRow - 1)
 				fputs("\n", fp);
 			else
 				fputs(", ", fp);
@@ -139,6 +152,37 @@ bool generateASM(Image img, char* filename, char* imagename) {
 	fclose(fp);
 
 	return true;
+}
+
+/**	Fills diffs_buffer with Pixel diffs between source and compare
+ */
+int loadDiffs(Image source, Image compare) {
+	num_diffs = 0;
+
+	printf("pixels per row = %d", source.pixelsPerRow);
+
+	// fill diffs buffer with diffs
+	for (int row = 0; row < source.height && row < compare.height; row++) // rows
+		for (int p = 0; p < source.pixelsPerRow && p < compare.pixelsPerRow; p++) { // pixels
+			for (int i = 0; i < 3; i++) // check R G B
+				if (source.image[row][p * source.bytesPerPixel + i]
+				!= compare.image[row][p * compare.bytesPerPixel + i]) {
+					// create difference Pixel
+					Pixel pixel = {
+						.offset = row * source.pixelsPerRow + p,
+						.R = compare.image[row][p * compare.bytesPerPixel],
+						.G = compare.image[row][p * compare.bytesPerPixel + 1],
+						.B = compare.image[row][p * compare.bytesPerPixel + 2]
+					};
+
+					// add to Pixels array
+					diffs_buffer[num_diffs++] = pixel;
+					break;
+				}
+		}
+	
+	// return the # diffs (may be redundant, but useful for checks)
+	return num_diffs;
 }
 
 /**	Helper method for getPNGAsArray that generates an Image using libpng
@@ -185,7 +229,7 @@ Image generateImage(png_structp png, png_infop info, FILE* pngp, char* filename,
 
 	// return image
 	return (Image) {.image = image, .height = height,
-		.pixelsPerRow = rowbytes, .bytesPerPixel = rowbytes / width};
+		.pixelsPerRow = width, .bytesPerPixel = rowbytes / width};
 }
 
 /** getPNGAsArray returns an Image byte array for a given image.
@@ -201,7 +245,7 @@ Image getPNGAsArray(char* filename, bool alpha) {
 		NULL, NULL, NULL);
 
 	// initialize Image struct & png info structs
-	png_infop info = NULL; Image img = {NULL, 0, 0};
+	png_infop info = NULL; Image img = {NULL, 0, 0, 0};
 	
 	// verify file was successfully opened & png struct was intialized
 	if (!pngp || !png) {
@@ -247,7 +291,7 @@ Image getPNGAsArray(char* filename, bool alpha) {
  *		file in. If this is null, resultant file is put in working directory.
  *	@param filepath the path to the source png file to find the .asm path for
  */
-void storeAsmPath(char* outdir, char* filepath) {
+void loadAsmPath(char* outdir, char* filepath) {
 	// keep track of append position in filename buffer to create filename
 	char* spot = filename_buffer;
 
@@ -332,6 +376,281 @@ int versionsort(const struct dirent** a, const struct dirent** b) {
 	return natStrCmp((*a)->d_name, (*b)->d_name);
 }
 
+/**	creates diffs file called filename-diffs
+ * 
+ */
+bool initializeDiffs(char* filename) {
+	// check if file w/ filename alr exists--manage
+	if (!checkContinue(filename))
+		return false;
+
+	// open file for writing--overwrites any old files
+	FILE* fp = fopen(filename, "w");
+
+	// check that file was opened
+	if (!fp) {
+		fprintf(stderr, "Error opening %s for writing: %s\n", filename, strerror(errno));
+		return false;
+	}
+
+	// print header comment & data directive
+	fprintf(fp, "%s# %s holds image diffs\n%s\n", HEADING_COMMENT_BOX, filename, HEADING_COMMENT_BOX);
+	fprintf(fp, ".data\n\n");
+
+	fclose(fp);
+
+	return true;
+}
+
+void addDiffs(char* filename, int diffNum) {
+	// open file for appending
+	FILE* fp = fopen(filename, "a");;
+
+	// write offsets label
+	fprintf(fp,"diff_%d_offsets:\n", diffNum);
+
+	// write data (stored in diffs_buffer)
+	for (int i = 0; i < num_diffs; i++) {
+		// group as 8--only print .word at start of every 8 chars
+		if (i % 8 == 0)
+			fprintf(fp, "\t.word\t");
+		
+		// print offset, 10 width columns (to align w/ colors)
+		fprintf(fp, "%10d", diffs_buffer[i].offset);
+		
+		// if last in group of 8, print \n, else print ,
+		if (i % 8 == 7 || i == num_diffs - 1)
+			fputs("\n", fp);
+		else
+			fputs(", ", fp);
+	}
+
+	// write colors label
+	fprintf(fp, "\ndiff_%d_colors:\n", diffNum);
+
+	// write data (stored in diffs_buffer)
+	for (int i = 0; i < num_diffs; i++) {
+		// group as 8--only print .word at start of every 8 chars
+		if (i % 8 == 0)
+			fprintf(fp, "\t.word\t");
+		
+		// print data (MIPS reads colors as RGB--no alpha (2 leading 0s))
+		fprintf(fp, "0x00%02X%02X%02X",diffs_buffer[i].R,
+			diffs_buffer[i].G, diffs_buffer[i].B);
+		
+		// if last in group of 8, print \n, else print ,
+		if (i % 8 == 7 || i == num_diffs - 1)
+			fputs("\n", fp);
+		else
+			fputs(", ", fp);
+	}
+
+	fputs("\n", fp);
+
+	// close fp
+	fclose(fp);
+}
+
+void pngDirToASMDiffs(char* srcdir, char* outdir, bool use_alpha) {
+	// use scandir to get the ordered directory contents
+	struct dirent** entries; // must free later
+	int num_files = scandir(srcdir, &entries, filesonly, versionsort);
+
+	// iterate over the files if they could be read
+	if (num_files < 0) {
+		fprintf(stderr, "Error reading %s: %s", srcdir, strerror(errno));
+		exit(1);
+	} else {	
+		// store prev image for comparisons
+		Image prev = {NULL, 0, 0, 0};
+		bool diffs_made = false;
+
+		// keep rreading next entry, calculating diffs
+		for (int n = 0; n <= num_files; n++) {
+			// use filename_buffer to store full filepath for src directory entries
+			strcpy(filename_buffer, srcdir);
+			if (*(filename_buffer + strlen(filename_buffer) - 1) != '/')
+				strncat(filename_buffer, "/", 299 - strlen(filename_buffer));
+			strncat(filename_buffer, entries[n == num_files ? 0 : n]->d_name, 299 - strlen(filename_buffer));
+
+			// try to retrieve image associated with filepath
+			Image img = getPNGAsArray(filename_buffer, use_alpha);
+
+			// if img was not read correctly, continue loop
+			if (img.image == NULL)
+				continue;
+
+			// fill filename buffer with .asm filepath
+			loadAsmPath(outdir, entries[n == num_files ? 0 : n]->d_name);
+
+			if (prev.image == NULL) {
+				// write the first image to a new file
+				if (generateASM(img, filename_buffer, entries[n == num_files ? 0 : n]->d_name)) {
+					printf("Created %s\n", filename_buffer);
+					prev = img;
+				} else // either user chose not to overwrite, or creation error
+					fprintf(stderr, "Failed to create %s\n", filename_buffer);
+			} else {
+				// load diffs between this image and prev into diffs
+				int num_diffs = loadDiffs(prev, img);
+
+				// create diffs file if it doesn't exist - exits on fail
+				// load diffs file into filename buffer
+				loadAsmPath(outdir, "diffs");
+
+				if (!diffs_made) {
+					if (!initializeDiffs(filename_buffer)) {
+						// cleanup then exit
+						free(img.image);
+						free(prev.image);
+						for (int i = n; i < num_files; i++)
+							free(entries[i]);
+						free(entries[0]);
+						free(entries);
+						return;
+					}
+					diffs_made = true;
+				}
+				
+				// append to diffs file
+				addDiffs(filename_buffer, n == num_files ? 0 : n);
+
+				// cleanup, set prev to curr img
+				free(prev.image);
+				prev = img;
+				img.image = NULL; // only ref to img.image is in prev now
+			}
+
+			// cleanup
+			if (n > 0)
+				free(entries[n == num_files ? 0 : n]);
+		}
+
+		// free entries pointer (it now points to a bunch of freed pointers)
+		free(entries);
+	}
+}
+
+void pngArgsToASMDiffs (int argc, char* argv[], char* outdir, bool use_alpha) {
+	// store prev image for comparisons
+	Image prev = {NULL, 0, 0, 0};
+	bool diffs_made = false;
+
+	// keep reading next entry, calculating diffs
+	for (int i = optind - 1; i < argc; i++) {
+		// retrieve image associated with the file
+		Image img = getPNGAsArray(argv[i], use_alpha);
+
+		// if img was not read correctly, continue loop
+		if (img.image == NULL)
+			continue;
+
+		// fill filename buffer with .asm filepath, if possible
+		loadAsmPath(outdir, argv[i]);
+
+		if (prev.image == NULL) { // first img
+			// write the first image to a new file
+			if (generateASM(img, filename_buffer, argv[i])) {
+				printf("Created %s\n", filename_buffer);
+				prev = img;
+			} else
+				fprintf(stderr, "Failed to create %s\n", filename_buffer);
+		} else {
+			// load diffs between this image and prev into diffs
+			int num_diffs = loadDiffs(prev, img);
+
+			// create diffs file if it doesn't exist - exits on fail
+			// load diffs file into filename buffer
+			loadAsmPath(outdir, "diffs");
+
+			if (!diffs_made) {
+				if (!initializeDiffs(filename_buffer)) {
+					// cleanup then exit
+					free(img.image);
+					free(prev.image);
+					return;
+				}
+				diffs_made = true;
+			}
+			
+			// append to diffs file
+			addDiffs(filename_buffer, i - optind + 1);
+
+			// cleanup, set prev to curr img
+			free(prev.image);
+			prev = img;
+			img.image = NULL; // only ref to img.image is in prev now
+		}
+	}
+}
+
+void pngDirToASM(char* srcdir, char* outdir, bool use_alpha) {
+	// use scandir to get the ordered directory contents
+	struct dirent** entries; // must free later
+	int num_files = scandir(srcdir, &entries, filesonly, versionsort);
+
+	// iterate over the files if they could be read
+	if (num_files < 0) {
+		fprintf(stderr, "Error reading %s: %s", srcdir, strerror(errno));
+		exit(1);
+	} else {
+		for (int n = 0; n < num_files; n++) {
+			// use filename_buffer to store full filepath for src directory entries
+			strcpy(filename_buffer, srcdir);
+			if (*(filename_buffer + strlen(filename_buffer) - 1) != '/')
+				strncat(filename_buffer, "/", 299 - strlen(filename_buffer));
+			strncat(filename_buffer, entries[n]->d_name, 299 - strlen(filename_buffer));
+
+			// try to retrieve image associated with filepath
+			Image img = getPNGAsArray(filename_buffer, use_alpha);
+
+			// if img was not read correctly, continue loop
+			if (img.image == NULL)
+				continue;
+
+			// fill filename buffer with .asm filepath
+			loadAsmPath(outdir, entries[n]->d_name);
+
+			// write image to file
+			if (generateASM(img, filename_buffer, entries[n]->d_name))
+				printf("Created %s\n", filename_buffer);
+			else // either user chose not to overwrite, or creation error
+				fprintf(stderr, "Failed to create %s\n", filename_buffer);
+
+			// cleanup
+			free(img.image);
+			free(entries[n]);
+		}
+
+		// free entries pointer (it now points to a bunch of freed pointers)
+		free(entries);
+	}
+}
+
+void pngArgsToASM(int argc, char* argv[], char* outdir, bool use_alpha) {
+	// parse command line options from optind
+	for (int i = optind; i < argc; i++) {
+		// retrieve image associated with the file
+		Image img = getPNGAsArray(argv[i], use_alpha);
+
+		// if img was not read correctly, continue loop
+		if (img.image == NULL)
+			continue;
+
+		// fill filename buffer with .asm filepath, if possible
+		loadAsmPath(outdir, argv[i]);
+
+		// write image to file
+		if (generateASM(img, filename_buffer, argv[i]))
+			printf("Created %s\n", filename_buffer);
+		else
+			fprintf(stderr, "Failed to create %s\n", filename_buffer);
+
+		// cleanup
+		free(img.image);
+	}
+}
+
 // Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...
 int main(int argc, char* argv[]) {
 	// variables to hold option data
@@ -340,7 +659,7 @@ int main(int argc, char* argv[]) {
 
 	// read options
 	int c;
-	while ((c = getopt_long(argc, argv, "Ao:d:", long_options, NULL)) != -1) {
+	while ((c = getopt_long(argc, argv, "Ao:d:m", long_options, NULL)) != -1) {
 		switch(c) {
 			case 'A':
 				use_alpha = false;
@@ -375,70 +694,21 @@ int main(int argc, char* argv[]) {
 		// if output directory is given, create it
 		makeDir(outdir);
 
-		// use scandir to get the ordered directory contents
-		struct dirent** entries; // must free later
-		int num_files = scandir(srcdir, &entries, filesonly, versionsort);
+		// create ASM files from the pngs in src directory, no diffs
+		if (make_diffs)
+			pngDirToASMDiffs(srcdir, outdir, use_alpha);
+		else
+			pngDirToASM(srcdir, outdir, use_alpha);
 
-		if (num_files < 0) {
-			fprintf(stderr, "Error reading %s: %s", srcdir, strerror(errno));
-			exit(1);
-		} else {
-			for (int n = 0; n < num_files; n++) {
-				// use filename_buffer to store full filepath for directory entries
-				strcpy(filename_buffer, srcdir);
-				if (*(filename_buffer + strlen(filename_buffer) - 1) != '/')
-					strncat(filename_buffer, "/", 299 - strlen(filename_buffer));
-				strncat(filename_buffer, entries[n]->d_name, 299 - strlen(filename_buffer));
-
-				// try to retrieve image associated with filepath
-				Image img = getPNGAsArray(filename_buffer, use_alpha);
-
-				// if img was not read correctly, continue loop
-				if (img.image == NULL)
-					continue;
-
-				// fill filename buffer with .asm filepath
-				storeAsmPath(outdir, entries[n]->d_name);
-
-				// write image to file
-				if (generateASM(img, filename_buffer, entries[n]->d_name))
-					printf("Created %s\n", filename_buffer);
-				else // either user chose not to overwrite, or creation error
-					fprintf(stderr, "Failed to create %s\n", filename_buffer);
-
-				// cleanup
-				free(img.image);
-				free(entries[n]);
-			}
-
-			// free entries pointer (it now points to a bunch of freed pointers)
-			free(entries);
-		}
 	} else { // read files from command line
 		// if output directory is given, create it
 		makeDir(outdir);
 
-		// parse command line options from optind
-		for (int i = optind; i < argc; i++) {
-			// retrieve image associated with the file
-			Image img = getPNGAsArray(argv[i], use_alpha);
-
-			// if img was not read correctly, continue loop
-			if (img.image == NULL)
-				continue;
-
-			// fill filename buffer with .asm filepath, if possible
-			storeAsmPath(outdir, argv[i]);
-
-			// write image to file
-			if (generateASM(img, filename_buffer, argv[i]))
-				printf("Created %s\n", filename_buffer);
-			else
-				fprintf(stderr, "Failed to create %s\n", filename_buffer);
-
-			// cleanup
-			free(img.image);
-		}
+		// create ASM files from command line args, no diffs
+		if (make_diffs)
+			pngArgsToASMDiffs(argc, argv, outdir, use_alpha);
+		else
+			pngArgsToASM(argc, argv, outdir, use_alpha);
 	}
 
 	return 0;

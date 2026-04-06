@@ -1,29 +1,38 @@
 #-----------------------------------------------------------------------
-# testMMIO.asm
-# description: testing out MMIO tools
+# driver.asm
+# Description: driver for Black Hole game.
 #
-# author: Asha Mavankal
-# last updated: 20 Feb 2026
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
-.include "printAndDisplay.asm"
-.include "displayBoard.asm"
-
-# TODO repaint option for user (rp)
-# TODO home option for user (h) + are you sure msg
-# TODO wasd Player 1 ijkl Player 2
 
 .data
-board:	# 0x10010000
-	.space 262144 # reserve 256 px * 256 px * 4 bytes each
 
-text_welcome:
-	.ascii	"#########################################\n\n"
-	.ascii	"     Welcome to the Black Hole Game!\n\n"
-	.asciiz	"#########################################\n\n"
-text_select_mode:
-	.asciiz "Type 1 for 1-player mode, 2 for 2-player mode, and 0 to exit\n"
+.globl graphics_board
+.globl one_player_board
+.globl two_player_board
 
-text_set_up:
+# graphics_board: 0x10010000. Reserved space used for MMIO
+graphics_board:
+	.space 262144 # reserve 256 px * 256 px * 4 bytes each for colors
+
+# boards: 21 and 28 spots respectively. Each spot has 2 bytes: 1st byte
+#       is player # (0 = comp, 1, 2). 2nd byte is value (1-10 for one, 1-9 for two)
+one_player_board:
+    .byte 0 : 42
+two_player_board:
+    .byte 0 : 56
+
+welcome_and_instructions:
+	.ascii	"#############################################\n\n"
+	.ascii	"       Welcome to the Black Hole Game!\n\n"
+	.ascii	"############################################\n\n"
+instructions:
+	.asciiz "Instructions: Use WASD keys to navigate, and hit RETURN or SPACE to select\n"
+
+how_to_set_up:
 	.ascii	"\n############################################################################\n\n"
 	.ascii	"    Hi! Welcome to the Black Hole game!\n\n"
 	.ascii	"    This game uses MARS' bitmap display and MMIO simulator tools to\n"
@@ -69,22 +78,20 @@ text_set_up:
 	.ascii	"        inputs into the KEYBOARD input box. Have fun playing!\n\n"
 	.asciiz	"############################################################################\n\n"
 
-.include "boardData.asm"
-
 .text
-	# start program w/ terminal instructions
-	print_text (text_set_up)
 
-	# write welcome message
-	#la $t0, text_welcome
-	display_text (text_welcome)
+.globl main
+main:
+    # print how to use message to console
+    li $v0, 4
+    la $a0, how_to_set_up
+    syscall
 
-	# write instructions
-	display_text (text_select_mode)
+    # display welcome message to MMIO Display
+    la $a0, welcome_and_instructions
+    jal display_string
 
-	# initialize board
-	draw_board (board, frame)
+    # run HOME animation / input loop
+    jal home
 
-	# exit program
-	li $v0, 10
-	syscall
+    # user's choice is stored in $v0-- make decision based on that

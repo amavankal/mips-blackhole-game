@@ -11,13 +11,13 @@ home_offsets:
 	.word home_1_offsets,  home_2_offsets,  home_3_offsets,  home_4_offsets
 	.word home_5_offsets,  home_6_offsets,  home_7_offsets,  home_8_offsets
     .word home_9_offsets,  home_10_offsets, home_11_offsets, home_12_offsets
-    .word home_13_offsets, home_14_offsets, home_15_offsets, home_0_offsets
+    .word home_13_offsets, home_14_offsets, home_0_offsets
 
 home_colors:
 	.word home_1_colors,  home_2_colors,  home_3_colors,  home_4_colors
 	.word home_5_colors,  home_6_colors,  home_7_colors,  home_8_colors
     .word home_9_colors,  home_10_colors, home_11_colors, home_12_colors
-    .word home_13_colors, home_14_colors, home_15_colors, home_0_colors
+    .word home_13_colors, home_14_colors, home_0_colors
 
 home_1_offsets:
 	.word	     11995,      12251,      12505,      12506,      12508,      12509,      12763,      13019

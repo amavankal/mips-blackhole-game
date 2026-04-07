@@ -14,3 +14,17 @@
 .include "graphics/home/home-base-frame.asm"
 .include "graphics/home/home-animation-diffs.asm"
 .include "graphics/home/arrows.asm"
+
+# data for drawing the game boards
+.include "graphics/game/game-base-frame.asm"
+.include "graphics/game/block-assets.asm"
+.include "graphics/game/turn-messages.asm"
+
+.include "graphics/game/one-player-board.asm"
+.include "graphics/game/two-player-board.asm"
+
+# data for printing the win messages
+.include "graphics/win-messages/win-message-comp.asm"
+.include "graphics/win-messages/win-message-player.asm"
+.include "graphics/win-messages/win-message-p1.asm"
+.include "graphics/win-messages/win-message-p2.asm"

@@ -11,19 +11,10 @@
 .data
 
 .globl graphics_board
-.globl one_player_board
-.globl two_player_board
 
 # graphics_board: 0x10010000. Reserved space used for MMIO
 graphics_board:
 	.space 262144 # reserve 256 px * 256 px * 4 bytes each for colors
-
-# boards: 21 and 28 spots respectively. Each spot has 2 bytes: 1st byte
-#       is player # (0 = comp, 1, 2). 2nd byte is value (1-10 for one, 1-9 for two)
-one_player_board:
-    .byte 0 : 42
-two_player_board:
-    .byte 0 : 56
 
 welcome_and_instructions:
 	.ascii	"#############################################\n\n"
@@ -87,6 +78,7 @@ main:
     la $a0, how_to_set_up
     syscall
 
+game_loop:
     # display welcome message to MMIO Display
     la $a0, welcome_and_instructions
     jal display_string
@@ -95,7 +87,19 @@ main:
     jal home
 
     # user's choice is stored in $v0-- make decision based on that
+    beqz $v0, exit_termination  # check if user selected 0: exit
 
+    li $t0, 2
+    beq $v0, $t0, two_player_game
+
+    jal one_player_game
+    j game_loop
+
+two_player_game:
+    jal two_player_game
+    j game_loop
+
+exit_termination:
     # exit termination
     li $v0, 10
     syscall

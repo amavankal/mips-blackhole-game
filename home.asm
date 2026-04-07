@@ -211,9 +211,9 @@ exit_home_loop:
     jr $ra
 
 
-############################
-#### helper subroutines ####
-############################
+################################
+###### helper subroutines ######
+################################
 
 ### DRAW arrow ###
 # $a0 - user selection - 0 (exit), 1 (1 player), or 2 (2 player)

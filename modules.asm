@@ -25,6 +25,10 @@
 .globl is_go_character
 .globl is_up_only_character
 .globl is_down_only_character
+.globl draw_turn_message
+.globl draw_number
+.globl erase_number
+.globl draw_circle
 
 ### write message to MMIO display ###
 # $a0 - address of string to display
@@ -250,4 +254,143 @@ is_right_character:
 
 matches_right: # there is a match
     li $v0, 1
+    jr $ra
+
+#####################################################
+################## GUI subroutines ##################
+#####################################################
+
+### DRAW TURN message ###
+# $a0 - which player # (1 or 2): does p1 if any # but 2
+# no return, just does the thing
+draw_turn_message:
+    ## store addresses of offsets
+    li $t0, 2
+    beq $a0, $t0, use_p2_addresses
+
+    la $t0, p1_turn_offsets  # $t0: address of next offset for p2 msg
+    la $t1, p1_turn_colors   # $t1: address of next color for p2 msg
+
+    j draw_msg_loop
+
+use_p2_addresses:
+    la $t0, p2_turn_offsets  # $t0: address of next offset for p1 msg
+    la $t1, p2_turn_colors   # $t1: address of next color for p1 msg
+
+draw_msg_loop:
+    lw $t2, 0($t0)                  # $t2: next offset
+    bltz $t2, exit_draw_msg_loop    # exit if next offset is -1 (last)
+
+    sll $t2, $t2, 2     # convert next offset to word offset
+    lw $t3, 0($t1)      # $t3: next color
+
+    # store color @ offset on board
+    sw $t3, graphics_board($t2)
+
+    # increment address of next offset + address of next color
+    addi $t0, $t0, 4
+    addi $t1, $t1, 4
+
+    # loop
+    j draw_msg_loop
+
+exit_draw_msg_loop:
+    jr $ra
+
+### DRAW number ###
+# draws number on the game board
+# $a0 - number to draw
+# $a1 - offset to draw it at (in pixels)
+# $a2 - color
+draw_number:
+    # first load number's first offset
+    la $t0, number_offsets
+    addi $t1, $a0, -1       # -1 to make 0 indexed
+    sll $t1, $t1, 2         # *4 to make word offset
+
+    add $t0, $t0, $t1       # $t0 is addr of addr of first offset
+    lw $t0, 0($t0)          # $t0 is addr of first offset
+
+draw_number_loop:
+    # load next offset - break if -1 reached
+    lw $t1, 0($t0)
+    bltz $t1, exit_draw_number_loop
+
+    # add offset to given offset, then convert to word offset
+    add $t1, $a1, $t1
+    sll $t1, $t1, 2
+
+    # store color @ calculated offset
+    sw $a2, graphics_board($t1)
+
+    # increment addr of offset
+    addi $t0, $t0, 4
+
+    # loop
+    j draw_number_loop
+
+exit_draw_number_loop:
+    jr $ra
+
+### ERASE number ###
+# erases given number on the game board (for responsive spot selection)
+# $a0 - number to erase
+# $a1 - offset to erase it from (in pixels)
+erase_number:
+    # first load number's first offset
+    la $t0, number_offsets
+    addi $t1, $a0, -1       # -1 to make 0 indexed
+    sll $t1, $t0, 2         # *4 to make word offset
+
+    add $t0, $t0, $t1       # $t0 is addr of addr of first offset
+    lw $t0, 0($t0)          # $t0 is addr of first offset
+
+erase_number_loop:
+    # load next offset - break if -1 reached
+    lw $t1, 0($t0)
+    bltz $t1, exit_erase_number_loop
+
+    # add offset to given offset, then convert to word offset
+    add $t1, $a1, $t1
+    sll $t1, $t1, 2
+
+    # store color from game base @ calculated offset in final board
+    lw $t2, game_base_frame($t1)
+    sw $t2, graphics_board($t1)
+
+    # increment addr of offset
+    addi $t0, $t0, 4
+
+    # loop
+    j erase_number_loop
+
+exit_erase_number_loop:
+    jr $ra
+
+### DRAW CIRCLE ###
+# $a0 - offset to erase circle from  (in pixels)
+# $a1 - color
+draw_circle:
+    # first load circle's first offset
+    la $t0, circle_offsets      # $t0 is addr of first offset
+
+draw_circle_loop:
+    # load next offset - break if -1 reached
+    lw $t1, 0($t0)
+    bltz $t1, exit_draw_circle_loop
+
+    # add offset to given offset, then convert to word offset
+    add $t1, $a0, $t1
+    sll $t1, $t1, 2
+
+    # store color @ calculated offset
+    sw $a1, graphics_board($t1)
+
+    # increment addr of offset
+    addi $t0, $t0, 4
+
+    # loop
+    j draw_circle_loop
+
+exit_draw_circle_loop:
     jr $ra

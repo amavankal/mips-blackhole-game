@@ -13,6 +13,32 @@
 .globl circle_offsets
 .globl number_offsets
 
+.globl circle_color
+.globl selected_circle_color
+.globl computer_color
+.globl player1_color
+.globl player1_color_temp
+.globl player2_color
+.globl player2_color_temp
+
+## colors
+circle_color:
+	.word	0x00FFFFFF
+selected_circle_color:
+	.word	0x00FFFF6E
+
+computer_color:
+	.word	0x002196F3
+player1_color:
+	.word	0x00E91E63
+player2_color:
+	.word	0x00009688
+
+player1_color_temp:
+	.word	0x00791649
+player2_color_temp:
+	.word	0x0005525B
+
 ## circle
 circle_offsets:
 	.word	        12,         13,         14,         15,         16,         17,         18,        265

@@ -81,10 +81,10 @@ home_loop:
     ## check if there's user input. if there is, process it
     ## if user hits enter, load results into $v0
     # read control register
-    li $t0, 0xFFFF0000  # $t0 holds address of keyboard control register
-    lw $t0, 0($t0)      # read control bit
-    andi $t0, $t0, 1    # isolate control bit
-    beq $t0, $zero, check_update_frame       # if no input, update frame
+    li $t0, 0xFFFF0000               # $t0 holds address of keyboard control register
+    lw $t0, 0($t0)                   # read control bit
+    andi $t0, $t0, 1                 # isolate control bit
+    beqz $t0, check_update_frame     # if no input, update frame
 
     # read input
     li $t0, 0xFFFF0004

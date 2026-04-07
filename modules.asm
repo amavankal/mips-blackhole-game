@@ -25,10 +25,15 @@
 .globl is_go_character
 .globl is_up_only_character
 .globl is_down_only_character
+.globl is_up_character
+.globl is_down_character
+.globl is_left_character
+.globl is_right_character
 .globl draw_turn_message
 .globl draw_number
 .globl erase_number
 .globl draw_circle
+.globl get_row_from_index
 
 ### write message to MMIO display ###
 # $a0 - address of string to display
@@ -76,7 +81,7 @@ right:      .ascii "dD"
 .text
 
 ### check if character is one of the GO characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_go_character:
     # store go address in $t0
@@ -103,7 +108,7 @@ matches_go: # there is a match
     jr $ra
 
 ### check if character is one of the UP ONLY characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_up_only_character:
     # store up address in $t0
@@ -134,7 +139,7 @@ matches_up_only: # there is a match
     jr $ra
 
 ### check if character is one of the DOWN ONLY characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_down_only_character:
     # store down address in $t0
@@ -165,7 +170,7 @@ matches_down_only: # there is a match
     jr $ra
 
 ### check if character is one of the UP characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_up_character:
     # store up address in $t0
@@ -188,7 +193,7 @@ matches_up: # there is a match
     jr $ra
 
 ### check if character is one of the DOWN characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_down_character:
     # store up address in $t0
@@ -211,7 +216,7 @@ matches_down: # there is a match
     jr $ra
 
 ### check if character is one of the LEFT characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_left_character:
     # store up address in $t0
@@ -234,7 +239,7 @@ matches_left: # there is a match
     jr $ra
 
 ### check if character is one of the RIGHT characters ###
-# $a0 - character to check
+# $a0 - character to check (doesn't modify $a0)
 # $v0 - 0 if false, 1 if true
 is_right_character:
     # store up address in $t0
@@ -340,7 +345,7 @@ erase_number:
     # first load number's first offset
     la $t0, number_offsets
     addi $t1, $a0, -1       # -1 to make 0 indexed
-    sll $t1, $t0, 2         # *4 to make word offset
+    sll $t1, $t1, 2         # *4 to make word offset
 
     add $t0, $t0, $t1       # $t0 is addr of addr of first offset
     lw $t0, 0($t0)          # $t0 is addr of first offset
@@ -393,4 +398,51 @@ draw_circle_loop:
     j draw_circle_loop
 
 exit_draw_circle_loop:
+    jr $ra
+
+### GET ROW FROM INDEX ####
+# helper for get_new_cursor_from_input; uses $t0
+# brute force--highkey might be faster than floating point math
+# $a0 - cursor
+# $v0 - row
+get_row_from_index:
+    # check if row 1
+    li $t0, 1
+    bge $a1, $t0, not_row1
+    # is row 1
+    li $v0, 1
+    jr $ra
+not_row1:   # check if row 2
+    li $t0, 3
+    bge $a1, $t0, not_row2
+    # is row 2
+    li $v0, 2
+    jr $ra
+not_row2:   # check if row 3
+    li $t0, 6
+    bge $a1, $t0, not_row3
+    # is row 3
+    li $v0, 3
+    jr $ra
+not_row3:   # check if row 4
+    li $t0, 10
+    bge $a1, $t0, not_row4
+    # is row 4
+    li $v0, 4
+    jr $ra
+not_row4:   # check if row 5
+    li $t0, 15
+    bge $a1, $t0, not_row5
+    # is row 5
+    li $v0, 5
+    jr $ra
+not_row5:   # check if row 6
+    li $t0, 21
+    bge $a1, $t0, not_row6
+    # is row 6
+    li $v0, 6
+    jr $ra
+not_row6:
+    # must be row 7
+    li $v0, 7
     jr $ra

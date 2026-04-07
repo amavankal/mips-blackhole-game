@@ -25,22 +25,13 @@
 frame_lag:
     .word 10
 
-## user input controls
-up:
-    .ascii "wWaA"
-down:
-    .ascii "sSdD"
-go:
-    .ascii " \n\t"
+.text
+.globl home
 
 ### HOME playback loop - run animations / read input ###
 # no arguments
 # uses $t0 - $t3
 # $v0 - 0 if user wants to exit, 1 if 1 player, 2 if 2 player
-
-.text
-.globl home
-
 home:
     ## subroutine prologue -- set up stack frame
     addi $sp, $sp -24
@@ -104,7 +95,7 @@ home_loop:
     bgtz $v0, exit_home_loop    # if > 0 (1), exit loop
 
     # check if input is up character
-    jal is_up_character
+    jal is_up_only_character
     beqz $v0, check_down    # if not up character, check if down
 
     move $s2, $s0           # store old selection in $s2
@@ -116,7 +107,7 @@ home_loop:
 
 check_down:    
     # check if input is down character
-    jal is_down_character
+    jal is_down_only_character
     beqz $v0, check_update_frame  # if not down character, continue
 
     move $s2, $s0               # store old selection in $s2
@@ -286,93 +277,4 @@ erase_arrow_loop:
     j erase_arrow_loop
 
 exit_erase_arrow_loop:
-    jr $ra
-
-### check if character is one of the go characters ###
-# $a0 - character to check
-# $v0 - 0 if false, 1 if true
-is_go_character:
-    # store go address in $t0
-    la $t0, go
-
-    # check if it's a space
-    lb $t1, 0($t0)
-    beq $a0, $t1, matches_go
-
-    # check if it's a newline
-    lb $t1, 1($t0)
-    beq $a0, $t1, matches_go
-
-    # check if it's a tab
-    lb $t1, 2($t0)
-    beq $a0, $t1, matches_go
-
-    # no match
-    li $v0, 0
-    jr $ra
-
-matches_go: # there is a match
-    li $v0, 1
-    jr $ra
-
-### check if character is one of the up characters ###
-# $a0 - character to check
-# $v0 - 0 if false, 1 if true
-is_up_character:
-    # store up address in $t0
-    la $t0, up
-
-    # check if it's "w"
-    lb $t1, 0($t0)
-    beq $a0, $t1, matches_up
-
-    # check if it's "W"
-    lb $t1, 1($t0)
-    beq $a0, $t1, matches_up
-
-    # check if it's "a"
-    lb $t1, 2($t0)
-    beq $a0, $t1, matches_up
-
-    # check if it's "A"
-    lb $t1, 3($t0)
-    beq $a0, $t1, matches_up
-
-    # no match
-    li $v0, 0
-    jr $ra
-
-matches_up: # there is a match
-    li $v0, 1
-    jr $ra
-
-### check if character is one of the down characters ###
-# $a0 - character to check
-# $v0 - 0 if false, 1 if true
-is_down_character:
-    # store down address in $t0
-    la $t0, down
-
-    # check if it's "s"
-    lb $t1, 0($t0)
-    beq $a0, $t1, matches_down
-
-    # check if it's "S"
-    lb $t1, 1($t0)
-    beq $a0, $t1, matches_down
-
-    # check if it's "d"
-    lb $t1, 2($t0)
-    beq $a0, $t1, matches_down
-
-    # check if it's "D"
-    lb $t1, 3($t0)
-    beq $a0, $t1, matches_down
-
-    # no match
-    li $v0, 0
-    jr $ra
-
-matches_down: # there is a match
-    li $v0, 1
     jr $ra

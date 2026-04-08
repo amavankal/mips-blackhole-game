@@ -31,6 +31,7 @@
 .globl is_left_character
 .globl is_right_character
 .globl draw_turn_message
+.globl erase_turn_message
 .globl draw_number
 .globl erase_number
 .globl draw_circle
@@ -360,6 +361,40 @@ draw_msg_loop:
     j draw_msg_loop
 
 exit_draw_msg_loop:
+    jr $ra
+
+### ERASE TURN message ###
+# $a0 - which player # (1 or 2): does p1 if any # but 2
+# no return, just does the thing
+erase_turn_message:
+    ## store addresses of offsets
+    li $t0, 2
+    beq $a0, $t0, use_p2_addresses_erase
+
+    # use p1 addresses
+    la $t0, p1_turn_offsets  # $t0: address of next offset for p2 msg
+    j erase_msg_loop
+
+use_p2_addresses_erase:
+    la $t0, p2_turn_offsets  # $t0: address of next offset for p1 msg
+
+erase_msg_loop:
+    lw $t2, 0($t0)                  # $t2: next offset
+    bltz $t2, exit_erase_msg_loop    # exit if next offset is -1 (last)
+
+    sll $t2, $t2, 2     # convert next offset to word offset (for board)
+    lw $t3, game_base_frame($t2)      # $t3: bg color
+
+    # store color @ offset on board
+    sw $t3, graphics_board($t2)
+
+    # increment address of next offset + address of next color
+    addi $t0, $t0, 4
+
+    # loop
+    j erase_msg_loop
+
+exit_erase_msg_loop:
     jr $ra
 
 ### DRAW number ###

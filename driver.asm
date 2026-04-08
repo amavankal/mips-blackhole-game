@@ -89,15 +89,9 @@ game_loop:
     # user's choice is stored in $v0-- make decision based on that
     beqz $v0, exit_termination  # check if user selected 0: exit
 
-    li $t0, 2
-    beq $v0, $t0, two_player_game
-
-    jal one_player_game
-    j game_loop
-
-two_player_game:
-    jal two_player_game
-    j game_loop
+    # only choices are 1 or 2 now
+    move $a0, $v0   # parameters for game subroutine
+    jal game
 
 exit_termination:
     # exit termination

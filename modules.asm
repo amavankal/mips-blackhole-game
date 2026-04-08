@@ -22,6 +22,7 @@
 ## subroutines ##
 .text
 .globl display_string
+.globl display_number
 .globl is_go_character
 .globl is_up_only_character
 .globl is_down_only_character
@@ -61,6 +62,64 @@ wait_ready:
     addi $t0, $t0, 1
     j write_loop
 exit_write_loop:
+    # exit subroutine
+    jr $ra
+
+### write text to MMIO display ###
+# $a0 - int to display
+display_number:
+    # subroutine prologue - set up stack frame
+    addi $sp, $sp, -4
+    sw $fp, 0($sp)
+    move $fp, $sp
+
+    # store number's digits on stack
+calc_digits:
+    beqz $a0, exit_calc_digits
+
+    # div by 10, store rem on stack, result in self
+    li $t0, 10
+    div $a0, $t0
+
+    # store remainder on stack
+    mfhi $t0
+    addi $sp, $sp, -1
+    sb $t0, 0($sp)
+
+    # set $a0 to result
+    mflo $a0
+
+    j calc_digits
+
+exit_calc_digits:
+    # write to display
+    li $t1, 0xFFFF000C          # address of display --> lui & ori
+    li $t2, 0xFFFF0008          # address of control register
+
+write_loop_number:
+    lb $t3, 0($sp)                    # load int byte @ $sp to $t3
+    addi $t3, $t3, 48                 # add '0' to make it to ASCII
+    bge $sp, $fp, exit_write_loop_number     # exit loop once gotten through array
+
+wait_ready_number:
+    # check if can write to output; try again if can't
+    lw $t4, 0($t2)
+    andi $t4, $t4, 1    # isolate last bit
+    beq $t4, $zero, wait_ready_number
+
+    # can write, so write:
+    sb $t3, 0($t1)
+
+    # increment stack pointer
+    addi $sp, $sp, 1
+
+    j write_loop_number
+exit_write_loop_number:
+    # subroutine epilogue - take down stack frame
+    move $sp, $fp
+    lw $fp, 0($sp)
+    addi $sp, $sp, 4
+
     # exit subroutine
     jr $ra
 
@@ -273,6 +332,7 @@ draw_turn_message:
     li $t0, 2
     beq $a0, $t0, use_p2_addresses
 
+    # use p1 addresses
     la $t0, p1_turn_offsets  # $t0: address of next offset for p2 msg
     la $t1, p1_turn_colors   # $t1: address of next color for p2 msg
 

@@ -30,6 +30,9 @@ instructions:
     .ascii "once the board fills up (since they have limited jumping range), the left and right keys\n"
     .asciiz "A/D will ALWAYS work to access any spot on the board)\n\n"
 
+goodbye:
+	.asciiz "Goodbye!\n"
+
 how_to_set_up:
 	.ascii	"\n############################################################################\n\n"
 	.ascii	"    Hi! Welcome to the Black Hole game!\n\n"
@@ -104,6 +107,10 @@ game_loop:
     j game_loop
 
 exit_termination:
+	# print goodbye message to MMIO (since it doesn't show up)
+	la $a0, goodbye
+	jal display_string
+
     # exit termination
     li $v0, 10
     syscall

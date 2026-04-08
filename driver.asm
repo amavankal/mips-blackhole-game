@@ -17,11 +17,11 @@ graphics_board:
 	.space 262144 # reserve 256 px * 256 px * 4 bytes each for colors
 
 welcome_and_instructions:
-	.ascii	"#############################################\n\n"
+	.ascii	"\n\n#############################################\n\n"
 	.ascii	"       Welcome to the Black Hole Game!\n\n"
 	.ascii	"############################################\n\n"
 instructions:
-	.asciiz "Instructions: Use WASD keys to navigate, and hit RETURN or SPACE to select\n"
+	.asciiz "Instructions: Use WASD keys to navigate, and hit RETURN, TAB, or SPACE to select\n"
 
 how_to_set_up:
 	.ascii	"\n############################################################################\n\n"
@@ -92,6 +92,9 @@ game_loop:
     # only choices are 1 or 2 now
     move $a0, $v0   # parameters for game subroutine
     jal game
+
+    # keep looping
+    j game_loop
 
 exit_termination:
     # exit termination

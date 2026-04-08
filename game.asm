@@ -22,10 +22,6 @@
 board:
     .byte -1 : 56
 
-player1_score:      .asciiz "\nPlayer 1 score: "
-player2_score:      .asciiz "\nPlayer 2 score: "
-computer_score:     .asciiz "\nComputer score: "
-
 .text
 .globl game
 
@@ -75,9 +71,12 @@ player_loop:
     move $a0, $s6
     jal draw_turn_message
 
-    ## get user selection & draw it on board
+    ## get user selection & draw it on board GUi
     move $a0, $s6
     jal get_user_selection
+
+    ## display board to MMIO display
+    jal display_board
 
     ## erase turn message
     move $a0, $s6
@@ -92,40 +91,52 @@ exit_player_loop:
     ## take computer's turn
     jal computer_turn
 
+    ## display board to MMIO display
+    jal display_board
+
     j gameplay_loop
 
 exit_gameplay_loop:
     ## calculate points - $v0 comp, $v1 p1, $a3 p2
     jal calculate_scores
 
-    ## move scores to variables - $s1, $s2, $s3, since no longer needed
-    move $s1, $v0
-    move $s2, $v1
-    move $s3, $a3
+    ## display results
+    move $a0, $v0   # computer score
+    move $a1, $v1   # player 1 score
+    move $a2, $a3   # player 2 score
 
-    ## display comp score
-    la $a0, computer_score
-    jal display_string
+    jal display_results
 
-    move $a0, $s1
-    jal display_number
+    ## wait for user to enter a go character before exiting
+    li $t0, 0xFFFF0000       # $t0 holds address of keyboard control register
 
-    # display p1 score
-    la $a0, player1_score
-    jal display_string
+await_end_input:
+    lw $t1, 0($t0)              # read control bit
+    andi $t1, $t1, 1            # isolate control bit
+    beqz $t1, await_end_input   # if no input, wait for more
 
-    move $a0, $s2
-    jal display_number
+    # read input
+    li $t1, 0xFFFF0004
+    lw $a0, 0($t1)      # put user input in $a0
 
-    # display p2 score, if 2 player game
-    bne $s0, 2, skip_display_p2score
-    la $a0, player2_score
-    jal display_string
+    # if input is NOT go char, keep looping until it is
+    jal is_go_character
 
-    move $a0, $s3
-    jal display_number
+    # loop if invalid
+    li $t0, 0xFFFF0000
+    beqz $v0, await_end_input
 
-skip_display_p2score:
+    ## reset board to all -1s to allow for reuse
+    li $t0, 0
+    li $t1, -1
+
+reset_board_loop:
+    beq $t0, 56, reset_board_done
+    sb $t1, board($t0)
+    addi $t0, $t0, 1
+    j reset_board_loop
+
+reset_board_done:
 
     ## subroutine epilogue -- take down stack frame
     move $sp, $fp
@@ -497,16 +508,16 @@ continue_handle_up:
     srl $t1, $t1, 1 # 1st idx in row r
 
     # column # for idx (cursor - first in row)
-    sub $t2, $a0, $t1
+    sub $t4, $a0, $t1
 
     # compute midpoint
-    srl $t3, $t0, 1     # r / 2
-    add $t3, $t1, $t3   # midpoint of row
+    srl $t2, $t0, 1     # r / 2
+    add $t2, $t1, $t2   # midpoint of row
 
     # if current idx < midpoint, try top right, else top left
-    blt $a0, $t3, try_top_right
+    blt $a0, $t2, try_top_right_first_up
 
-try_top_left:
+try_top_left_first_up:
     # $t1: top left cursor ( - r)
     sub $t1, $a0, $t0
 
@@ -514,13 +525,29 @@ try_top_left:
     sll $t2, $t1, 1     # multiply top left cursor * 2 for idx in board
     lb $t2, board($t2)
 
-    bgez $t2, up_failed     # if top left has smth, stop
+    bgez $t2, try_top_right_up     # if top left has smth, try right
 
     # top left is valid, and free.. return that index
     move $v0, $t1
     j exit_handle_up
 
-try_top_right:
+try_top_right_up:
+    addi $t5, $t0, -1
+    beq $t4, $t5, up_failed # if last in row, skip
+
+    addi $t1, $t1, 1    # top right cursor = top left cursor + 1
+    
+    # see if top right is full
+    sll $t2, $t1, 1
+    lb $t2, board($t2)
+
+    bgez $t2, up_failed
+
+    # top right is valid and free.. return index
+    move $v0, $t1
+    j exit_handle_up
+
+try_top_right_first_up:
     # $t1: top right cursor ( - r + 1)
     sub $t1, $a0, $t0
     addi $t1, $t1, 1
@@ -529,9 +556,24 @@ try_top_right:
     sll $t2, $t1, 1     # multiply top right cursor * 2 for idx in board
     lb $t2, board($t2)
 
-    bgez $t2, up_failed     # if top right has smth, stop
+    bgez $t2, try_top_left_up     # if top right has smth, try left
 
     # top right is valid, and free.. return that index
+    move $v0, $t1
+    j exit_handle_up
+
+try_top_left_up:
+    beqz $t4, up_failed    # if first in row, skip
+
+    addi $t1, $t1, -1    # top left cursor = top right cursor - 1
+
+    # see if top left is full
+    sll $t2, $t1, 1     # multiply top left cursor * 2 for idx in board
+    lb $t2, board($t2)
+
+    bgez $t2, up_failed     # if top left has smth, stop
+
+    # top left is valid, and free.. return that index
     move $v0, $t1
     j exit_handle_up
 
@@ -741,6 +783,11 @@ computer_call_draw_number:
     jr $ra
 ## -----------------------------------------------------
 
+.data
+newline: .asciiz"\n"
+
+.text
+
 ### CALCULATE SCORES ###
 # assumes there is at least 1 open spot
 # $v0 - computer points
@@ -748,9 +795,10 @@ computer_call_draw_number:
 # $a3 - player 2 points
 calculate_scores:
     ## subroutine prologue -- set up stack frame
-    addi $sp, $sp, -4
-    sw $fp, 4($sp)
-    sw $ra, 0($sp)
+    # leave a spot to save index of open spot
+    addi $sp, $sp, -12
+    sw $fp, 8($sp)
+    sw $ra, 4($sp)
     move $fp, $sp
 
     # first, find index of only open spot
@@ -771,22 +819,21 @@ find_open_spot:
     j find_open_spot
 
 spot_found:
-    # $t0: index of free spot
+    # save index of free spot on stack
+    sw $t0, 0($sp)
+
+    # $t1: get 1-indexed row number 
     move $a0, $t0
     jal get_row_from_index
-
-    # restore $t0
-    move $t0, $a0
-
-    # $t1: row number of free spot - 1 indexed
     move $t1, $v0
 
-    # $t2: column number idx - (r * (r-1) / 2) - 0 indexed
+    # get first column in row idx: (r * (r-1) / 2) -- 0 indexed
     addi $t2, $t1, -1
     mulo $t2, $t1, $t2
     srl $t2, $t2, 1
 
-    # column index in row
+    # $t2: column index in row = idx - idx of first column in row
+    lw $t0, 0($sp)
     sub $t2, $t0, $t2
 
     # $v0 holds comp pts, $v1 holds player 1 points, $a3 holds player 2 points
@@ -876,9 +923,9 @@ continue_check_bottom:
 skip_bottom:
     ## subroutine epilogue -- take down stack frame
     move $sp, $fp
-    lw $ra, 0($sp)
-    lw $fp, 4($sp)
-    addi $sp, $sp, 4
+    lw $ra, 4($sp)
+    lw $fp, 8($sp)
+    addi $sp, $sp, 12
 
     jr $ra
 

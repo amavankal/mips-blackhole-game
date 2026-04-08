@@ -502,38 +502,32 @@ exit_draw_circle_loop:
 # $v0 - row
 get_row_from_index:
     # check if row 1
-    li $t0, 1
-    bge $a1, $t0, not_row1
+    bgtz $a0, not_row1
     # is row 1
     li $v0, 1
     jr $ra
 not_row1:   # check if row 2
-    li $t0, 3
-    bge $a1, $t0, not_row2
+    bgt $a0, 2, not_row2
     # is row 2
     li $v0, 2
     jr $ra
 not_row2:   # check if row 3
-    li $t0, 6
-    bge $a1, $t0, not_row3
+    bgt $a0, 5, not_row3
     # is row 3
     li $v0, 3
     jr $ra
 not_row3:   # check if row 4
-    li $t0, 10
-    bge $a1, $t0, not_row4
+    bge $a0, 9, not_row4
     # is row 4
     li $v0, 4
     jr $ra
 not_row4:   # check if row 5
-    li $t0, 15
-    bge $a1, $t0, not_row5
+    bgt $a0, 14, not_row5
     # is row 5
     li $v0, 5
     jr $ra
 not_row5:   # check if row 6
-    li $t0, 21
-    bge $a1, $t0, not_row6
+    bgt $a0, 20, not_row6
     # is row 6
     li $v0, 6
     jr $ra

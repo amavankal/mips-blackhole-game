@@ -14,6 +14,7 @@
 #-----------------------------------------------------------------------
 
 .data
+.globl board
 
 ## board: 1-player game uses 21 indeces (42 bytes); 2-player game uses
 #   28 indeces (56 bytes). 1 index has 2 bytes: user # (0 = computer,
@@ -76,6 +77,8 @@ player_loop:
     jal get_user_selection
 
     ## display board to MMIO display
+    move $a0, $s0
+    li $a1, -1 # -1 means don't display temp spot 
     jal display_board
 
     ## erase turn message
@@ -92,6 +95,8 @@ exit_player_loop:
     jal computer_turn
 
     ## display board to MMIO display
+    move $a0, $s0
+    li $a1, -1 # -1 means don't display temp spot 
     jal display_board
 
     j gameplay_loop

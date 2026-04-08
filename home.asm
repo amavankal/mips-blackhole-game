@@ -67,9 +67,11 @@ draw_base_frame_loop:
     j draw_base_frame_loop
 
 exit_draw_base_frame_loop:
-    ## draw user selection arrow
+    ## draw user selection arrow & print to board
     move $a0, $s0
     jal draw_arrow
+    move $a0, $s0
+    jal display_user_selection
 
     # sleep for 1 cycle (doesn't read input but that's okay)
     li $v0, 32
@@ -176,15 +178,21 @@ exit_draw_updates_loop:
     li $s1, 0
 
 continue_update_frame:
-    ## draw arrow
-    beq $s2, $s0, skip_arrow_update
+    ## draw arrow & display user selection, if selection changed
+    beq $s2, $s0, skip_selection_update
 
     move $a0, $s2
     jal erase_arrow
     move $a0, $s0
     jal draw_arrow
-    
-skip_arrow_update:
+
+    move $a0, $s0
+    jal display_user_selection
+
+    # now that selection has been changed, set $s2 to $s0
+    move $s2, $s0
+
+skip_selection_update:
     ## sleep
     li $v0, 32
     lw $a0, frame_lag
@@ -216,6 +224,7 @@ exit_home_loop:
 ################################
 
 ### DRAW arrow ###
+# draws arrow on GUI
 # $a0 - user selection - 0 (exit), 1 (1 player), or 2 (2 player)
 # no results - just draws the arrow
 draw_arrow:

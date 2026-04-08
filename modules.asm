@@ -36,6 +36,7 @@
 .globl erase_number
 .globl draw_circle
 .globl get_row_from_index
+.globl display_user_selection
 
 ### write message to MMIO display ###
 # $a0 - address of string to display
@@ -74,6 +75,23 @@ display_number:
     sw $fp, 0($sp)
     move $fp, $sp
 
+    # if number is 0, just print 0
+    bnez $a0, calc_digits
+
+    # number is 0, so just wait till write is ready & write
+    li $t1, 0xFFFF000C          # address of display --> lui & ori
+    li $t2, 0xFFFF0008          # address of control register
+
+wait_ready_zero:
+    lw $t4, 0($t2)
+    andi $t4, $t4, 1    # isolate last bit
+    beq $t4, $zero, wait_ready_zero
+
+    li $t4, 48  # 0 is 48
+    sb $t4, 0($t1)
+
+    j exit_display_number
+
     # store number's digits on stack
 calc_digits:
     beqz $a0, exit_calc_digits
@@ -100,7 +118,7 @@ exit_calc_digits:
 write_loop_number:
     lb $t3, 0($sp)                    # load int byte @ $sp to $t3
     addi $t3, $t3, 48                 # add '0' to make it to ASCII
-    bge $sp, $fp, exit_write_loop_number     # exit loop once gotten through array
+    bge $sp, $fp, exit_display_number  # exit loop once gotten through array
 
 wait_ready_number:
     # check if can write to output; try again if can't
@@ -115,7 +133,7 @@ wait_ready_number:
     addi $sp, $sp, 1
 
     j write_loop_number
-exit_write_loop_number:
+exit_display_number:
     # subroutine epilogue - take down stack frame
     move $sp, $fp
     lw $fp, 0($sp)
@@ -534,4 +552,82 @@ not_row5:   # check if row 6
 not_row6:
     # must be row 7
     li $v0, 7
+    jr $ra
+
+.data
+select_mode:        .asciiz "  SELECT GAME MODE: (Press RETURN to confirm)\n"
+
+one_player_option:  .asciiz "    1 Player v. Computer\n"
+two_player_option:  .asciiz "    2 Players v. Computer\n"
+exit_option:        .asciiz "    Exit\n\n\n"
+
+selected_one_player_option:  .asciiz "  > 1 Player v. Computer\n"
+selected_two_player_option:  .asciiz "  > 2 Players v. Computer\n"
+selected_exit_option:        .asciiz "  > Exit\n\n\n"
+
+.text
+
+### display user selection
+# $a0 - user selection (0 = exit, 1 = 1-player, 2 = 2-player)
+display_user_selection:
+    ## subroutine prologue -- build stack frame
+    addi $sp, $sp, -12
+    sw $ra, 8($sp)
+    sw $fp, 4($sp)
+    sw $s0, 0($sp)
+    move $fp, $sp
+
+    # move $a0 to $s0 for storage
+    move $s0, $a0
+
+    # print selection message
+    la $a0, select_mode
+    jal display_string
+
+    # print player 1 option
+    beq $s0, 1, select_one_player_option
+
+    la $a0, one_player_option
+    jal display_string
+
+    j print_two_player
+
+select_one_player_option:
+    la $a0, selected_one_player_option
+    jal display_string
+
+    # print player 2 option
+print_two_player:
+    beq $s0, 2, select_two_player_option
+
+    la $a0, two_player_option
+    jal display_string
+
+    j print_exit
+
+select_two_player_option:
+    la $a0, selected_two_player_option
+    jal display_string
+    
+    # print exit option
+print_exit:
+    beq $s0, 0, select_exit_option
+
+    la $a0, exit_option
+    jal display_string
+
+    j exit_display_user_selection
+
+select_exit_option:
+    la $a0, selected_exit_option
+    jal display_string
+
+exit_display_user_selection:
+    ## subroutine epilogue -- take down stack frame
+    move $sp, $fp
+    lw $s0, 0($sp)
+    lw $fp, 4($sp)
+    lw $ra, 8($sp)
+    addi $sp, $sp, 12
+
     jr $ra

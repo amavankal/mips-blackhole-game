@@ -17,11 +17,18 @@ graphics_board:
 	.space 262144 # reserve 256 px * 256 px * 4 bytes each for colors
 
 welcome_and_instructions:
-	.ascii	"\n\n#############################################\n\n"
-	.ascii	"       Welcome to the Black Hole Game!\n\n"
-	.ascii	"############################################\n\n"
+	.ascii	"\n#######################################################\n\n"
+	.ascii	"            Welcome to the Black Hole Game!\n\n"
+	.ascii	"#######################################################\n\n"
 instructions:
-	.asciiz "Instructions: Use WASD keys to navigate, and hit RETURN, TAB, or SPACE to select\n"
+	.ascii "Instructions: Use WASD keys to navigate, and press RETURN, TAB, or SPACE to select.\n\n"
+    .ascii "Take turns with the computer and optionally another player selecting a spot in the\n"
+    .ascii "pyramidal game board to enter the numbers 1-10 (1 player mode) or 1-9 (2 player mode).\n"
+    .ascii "The goal of this game is to have the smallest sum of numbers surrounding the one remaining\n"
+    .ascii "empty spot on the game board (the black hole).\n\n"
+    .ascii "(Note: regarding WASD navigation, if you are having trouble with the up/down W/S keys\n"
+    .ascii "once the board fills up (since they have limited jumping range), the left and right keys\n"
+    .asciiz "A/D will ALWAYS work to access any spot on the board)\n\n"
 
 how_to_set_up:
 	.ascii	"\n############################################################################\n\n"

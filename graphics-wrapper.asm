@@ -26,16 +26,14 @@
 #        - two_player_board_offsets (offsets array to draw 2-player board)
 #        - two_player_board_colors  (color array to draw 2-player board)
 #        - two_player_block_offsets (offsets array that holds starts of 28 2-player board blocks)
-#
-#   graphics/win-messages:
-#        - win_computer_offsets     (offsets array to draw "Computer Wins" message)
-#        - win_computer_colors      (color array to draw "Computer Wins" message)
-#        - win_player_offsets       (offsets array to draw "Player Wins" message)
-#        - win_player_colors        (color array to draw "Player Wins" message)
-#        - win_p1_offsets           (offsets array to draw "Player 1 Wins" message)
-#        - win_p1_colors            (color array to draw "Player 1 Wins" message)
-#        - win_p2_offsets           (offsets array to draw "Player 2 Wins" message)
-#        - win_p2_colors            (color array to draw "Player 2 Wins" message)
+#        - back_home_offsets         (offsets array to draw "Back Home" option)
+#        - back_home_colors          (color array to draw "Back Home" option)
+#        - player1_win_offsets       (offsets array to draw "Player 1 Wins" message)
+#        - player1_win_colors        (color array to draw "Player 1 Wins" message)
+#        - player2_win_offsets       (offsets array to draw "Player 2 Wins" message)
+#        - player2_win_colors        (color array to draw "Player 2 Wins" message)
+#        - computer_win_offsets      (offsets array to draw "Computer Wins" message)
+#        - computer_win_colors       (color array to draw "Computer Wins" message)
 #
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
@@ -56,8 +54,4 @@
 .include "graphics/game/one-player-board.asm"
 .include "graphics/game/two-player-board.asm"
 
-# data for printing the win messages
-.include "graphics/win-messages/win-message-comp.asm"
-.include "graphics/win-messages/win-message-player.asm"
-.include "graphics/win-messages/win-message-p1.asm"
-.include "graphics/win-messages/win-message-p2.asm"
+.include "graphics/game/game-end-messages.asm"

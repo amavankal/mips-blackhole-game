@@ -10,12 +10,13 @@
 # Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
+.globl home
+
 .data
 frame_lag:
     .word 10
 
 .text
-.globl home
 
 ### HOME playback loop - run animations / read input ###
 # no arguments
@@ -110,7 +111,7 @@ check_down:
     li $s0, 0
 
 check_update_frame:
-    # increment poll counter
+    # increment poll counter--loop around if >= 16
     addi $s3, $s3, 1
     li $t0, 16
     blt $s3, $t0, continue_check_update_frame
@@ -122,6 +123,21 @@ continue_check_update_frame:
     li $t0, 15
     beq $s3, $t0, update_frame
 
+    ## draw arrow & display user selection, if selection changed
+    beq $s2, $s0, skip_selection_update_between
+
+    move $a0, $s2
+    jal erase_arrow
+    move $a0, $s0
+    jal draw_arrow
+
+    move $a0, $s0
+    jal display_user_selection
+
+    # now that selection has been changed, set $s2 to $s0
+    move $s2, $s0
+
+skip_selection_update_between:
     # not updating frame, so sleep
     li $v0, 32
     lw $a0, frame_lag

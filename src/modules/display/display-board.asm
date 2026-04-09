@@ -128,8 +128,8 @@ end_temp_display:
     j write_spots_loop
 
 exit_write_spots_loop:
-    ## print newline
-    la $a0, newline
+    ## print 2 newlines
+    la $a0, newline2
     jal display_string
 
     ## increment display board loop
@@ -139,9 +139,6 @@ exit_write_spots_loop:
     j display_board_loop
 
 exit_display_board_loop:
-    # print one more newline
-    la $a0, newline
-    jal display_string
 
     ## subroutine epilogue -- take down stack frame
     move $sp, $fp
@@ -171,11 +168,11 @@ display_spaces:
 write_space_loop:
     beq $t0, $a0, exit_write_space_loop   # exit loop once printed desired spaces
 
-wait_ready:
+board_wait_ready:
     # check if can write to output; try again if can't
     lw $t4, 0($t2)  # control value
     andi $t4, $t4, 1    # isolate last bit in control
-    beqz $t4, wait_ready
+    beqz $t4, board_wait_ready
 
     # can write, so write:
     sb $t1, 0($t3)
@@ -258,11 +255,28 @@ display_temp_spot:
     move $fp, $sp
 
     # print temp spot
+    beq $a0, 10, print_10
+    
+    # print value for 1-9
     addi $t0, $a0, 48   # convert value to char
     la $a0, temp_buffer
     sb $t0, 1($a0)
     jal display_string
+    j exit_display_temp_spot
 
+print_10:
+    # print value for 10
+    la $a0, temp_buffer
+    li $t0, 49
+    sb $t0, 1($a0)
+    li $t0, 48
+    sb $t0, 2($a0)
+    jal display_string
+
+    li $t0, 32 # space
+    sb $t0, 2($a0)
+
+exit_display_temp_spot:
     ## subroutine epilogue -- take down stack frame
     move $sp, $fp
     lw $fp, 0($sp)

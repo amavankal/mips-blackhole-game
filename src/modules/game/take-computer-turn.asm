@@ -34,13 +34,13 @@ take_computer_turn:
     ## generate random number from spots remaining [0, spots left)
     li $v0, 42
     li $a0, 0
-    move $a1, $a0
+    lw $a1, 0($sp)   # num spots remaining
     syscall
 
     ## select next free spot
     li $t0, 0   # LCV
     li $t1, 0   # num spots skipped
-    move $t2, $a0   # num free spots to skip 
+    move $t2, $a0   # num free spots to skip - result of rand syscall
 
 computer_free_spot_loop:
     li $t3, 28

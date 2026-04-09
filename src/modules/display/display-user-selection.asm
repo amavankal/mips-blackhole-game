@@ -16,11 +16,11 @@ select_mode:        .asciiz "  SELECT GAME MODE: (Press RETURN to confirm)\n"
 
 one_player_option:  .asciiz "    1 Player v. Computer\n"
 two_player_option:  .asciiz "    2 Players v. Computer\n"
-exit_option:        .asciiz "    Exit\n\n\n"
+exit_option:        .asciiz "    Exit\n\n\n\n"
 
 selected_one_player_option:  .asciiz "  > 1 Player v. Computer\n"
 selected_two_player_option:  .asciiz "  > 2 Players v. Computer\n"
-selected_exit_option:        .asciiz "  > Exit\n\n\n"
+selected_exit_option:        .asciiz "  > Exit\n\n\n\n"
 
 .text
 

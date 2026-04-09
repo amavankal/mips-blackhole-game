@@ -83,11 +83,6 @@ player_loop:
     move $a0, $s6
     jal get_user_selection
 
-    ## display board to MMIO display
-    move $a0, $s0
-    li $a1, -1 # -1 means don't display temp spot 
-    jal display_board
-
     ## erase turn message
     move $a0, $s6
     jal erase_turn_message
@@ -108,11 +103,13 @@ exit_player_loop:
     move $s3, $v0
     move $s5, $v1
 
-    ## display board to MMIO display
+    ## display board to MMIO display if $s5 == 1
+    bgt $s5, 1, skip_display_board
     move $a0, $s0
     li $a1, -1 # -1 means don't display temp spot 
     jal display_board
 
+skip_display_board:
     j gameplay_loop
 
 exit_gameplay_loop:

@@ -1,6 +1,6 @@
 # Graphics Generation: PNG to ASM
 
-This directory contains the tool I created to convert the graphics I designed for this game from PNGs to .asm data files, pngToAsm. The graphics (in `assets`, `base-frames`, `home-animation-frames`) were created with pixilart.com's drawing tools.
+This directory contains the tool I created to convert the graphics I designed for this game from PNGs to .asm data files, pngToAsm, and the original graphics files. The graphics (in `assets`, `base-frames`, and `home-animation-frames`) were created with pixilart.com's drawing tools.
 
 Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...
 

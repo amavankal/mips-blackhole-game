@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------
 # driver.asm
-# Description: driver for Black Hole game.
+# Description: Entry point for Black Hole game program.
 #
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
@@ -8,9 +8,10 @@
 # Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
-
 .globl graphics_board
+.globl main
+
+.data
 
 # graphics_board: 0x10010000. Reserved space used for MMIO
 graphics_board:
@@ -81,7 +82,6 @@ how_to_set_up:
 
 .text
 
-.globl main
 main:
     # print how to use message to console
     li $v0, 4
@@ -93,21 +93,22 @@ game_loop:
     la $a0, welcome_and_instructions
     jal display_string
 
-    # run HOME animation / input loop
+    # run HOME animation - returns user's game mode choice
+	# $v0: 0 = exit, 1 = 1 player mode, 2 = 2 player mode
     jal home
 
-    # user's choice is stored in $v0-- make decision based on that
-    beqz $v0, exit_termination  # check if user selected 0: exit
+    # exit program if user selected to exit
+    beqz $v0, exit_termination
 
-    # only choices are 1 or 2 now
-    move $a0, $v0   # parameters for game subroutine
+    # run game
+    move $a0, $v0   # $a0: game mode (1 or 2)
     jal game
 
-    # keep looping
+    # loop until user chooses to exit
     j game_loop
 
 exit_termination:
-	# print goodbye message to MMIO (since it doesn't show up)
+	# print goodbye message to MMIO
 	la $a0, goodbye
 	jal display_string
 

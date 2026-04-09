@@ -1,6 +1,6 @@
 #-----------------------------------------------------------------------
-# process-input.asm
-# Description: Contains subroutines that process user input characters
+# input-utils.asm
+# Description: Contains subroutines that take in user input characters
 #   and determine their validity / type.
 #
 # Author: Asha Mavankal

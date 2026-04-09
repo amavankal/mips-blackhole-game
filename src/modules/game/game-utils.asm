@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------
-# utils.asm
+# game-utils.asm
 # Description: Contains useful miscellaneous subroutines that are used
 #   during the game.
 #

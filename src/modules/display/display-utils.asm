@@ -1,5 +1,5 @@
 #-----------------------------------------------------------------------
-# display-to-mmio.asm
+# display-utils.asm
 # Description: Contains subroutines that are used throughout the
 #   program to display data to the MMIO display register.
 #

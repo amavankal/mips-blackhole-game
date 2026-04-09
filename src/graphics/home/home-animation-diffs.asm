@@ -1,11 +1,24 @@
 #-----------------------------------------------------------------------
-# homeFrames/diffs.asm holds image diffs
+# home-animation-diffs.asm
+# Description: contains 30 arrays of index-color pairs to draw 15
+#	animation frames for the home screen. Each offset-color array
+#	pair contains the pixels that need to be changed from the previous
+#	animation frame to become the next. The animation frames loop,
+#	which is why the laft offset-color array pair is indexed 0, as it
+# 	contains the differences to return to the 0th frame from the 14th.
+#
+#	The offsets arrays are all -1 terminated.
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
-
-.data
 
 .globl home_offsets
 .globl home_colors
+
+.data
 
 home_offsets:
 	.word home_1_offsets,  home_2_offsets,  home_3_offsets,  home_4_offsets

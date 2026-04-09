@@ -1,10 +1,23 @@
 #-----------------------------------------------------------------------
-# diffs.asm holds image diffs
+# arrows.asm
+# Description: contains an array of 3 -1 terminated offset arrays that
+#	are used to draw selector arrows on the home frame to indicate 
+#	which of the 3 game options the user has currently selected.
+#
+#	Also contains a color array to colorize those arrows (there is only
+#	one, as all the arrows have the same color; they are just at
+#	different positions on the board).
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
 .globl arrow_offsets
 .globl arrow_colors
+
+.data
 
 arrow_offsets:
 	.word exit_arrow_offsets, p1_arrow_offsets, p2_arrow_offsets

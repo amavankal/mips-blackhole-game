@@ -1,5 +1,12 @@
 #-----------------------------------------------------------------------
-# homeFrames/pixil-frame-0.asm holds image data for pixil-frame-0.png
+# home-base-frame.asm
+# Description: contains 65,536 word long color array used to draw the
+#	first home frame on the game board (256px x 256px).
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .data

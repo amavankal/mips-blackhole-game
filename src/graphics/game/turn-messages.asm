@@ -5,6 +5,8 @@
 #	game board when a user is interactively selecting a spot on the
 #	board.
 #
+#	The offsets arrays are both -1 terminated.
+#
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
 # Section: HN1

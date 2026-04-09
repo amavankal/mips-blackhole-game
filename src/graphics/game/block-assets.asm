@@ -1,10 +1,12 @@
 #-----------------------------------------------------------------------
 # block-assets.asm
-# Description: contains offset arrays to draw the numbers 1-10 and
-#	a 31x31px circle on a game board--these offsets start from 0, and
-#	are intended to be added to the offsets in one_player_block_offsets
-#	or two_player_block_offsets to draw circles / numbers that are
-#	aligned with the respective game boards.
+# Description: contains an array of 10 -1 terminated offset arrays to
+#	draw the numbers 1-10 and a -1 terminated offsets array to draw
+#	a 31x31px circle on a game board. All these offsets start from the 
+#	top left of a 256x256 board, and are intended to be added to the
+#	offsets in one_player_block_offsets or two_player_block_offsets
+#	to draw circles / numbers that are aligned with their respective
+#	game boards.
 #
 #	Also contains color constants to colorize the number and circle
 #	assets. The circle colors are used to colorize the circles on the

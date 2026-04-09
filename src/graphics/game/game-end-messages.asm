@@ -5,6 +5,8 @@
 #	WINS", and "COMPUTER WINS"; the latter three messages are colorized
 #	to match their theme colors defined in block-assets.asm.
 #
+#	The offsets arrays are all -1 terminated.
+#
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
 # Section: HN1

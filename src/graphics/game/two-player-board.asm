@@ -10,6 +10,10 @@
 #	where to draw "block assets" on the game board, like numbers and
 #	circles, so that they align with the board's drawn circles.
 #
+#	The offsets array for the game board is -1 terminated, but the
+#	array for the block offsets is not because the length is known
+#	(there are 28 circles on a 2-player game board).
+#
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
 # Section: HN1

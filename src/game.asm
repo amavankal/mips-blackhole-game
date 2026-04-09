@@ -13,8 +13,10 @@
 # Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
+.globl game
 .globl board
+
+.data
 
 ## board: 1-player game uses 21 indeces (42 bytes); 2-player game uses
 #   28 indeces (56 bytes). 1 index has 2 bytes: user # (0 = computer,
@@ -24,7 +26,6 @@ board:
     .byte -1 : 56
 
 .text
-.globl game
 
 ## $a0 - index of game
 game:
@@ -47,7 +48,8 @@ game:
     li $s2, 1       # next number to draw for player 2
     li $s3, 1       # next number to draw for computer
     li $s4, -1      # position of user's cursor (0 - 20 or 0 - 27)
-    jal fill_spots_remaining    # $s5: number of spots on board remaining
+    jal get_num_spots 
+    move $s5, $v0   # number of remaining spots in game board
 
     ## draw base frame + board ($a0 alr holds game mode)
     jal draw_game_board
@@ -65,6 +67,7 @@ player_loop:
     bgt $s6, $s0, exit_player_loop
 
     ## find first free cursor position for player & set it as cursor
+    move $a0, $s0
     jal find_first_free_cursor
     move $s4, $v0
 
@@ -92,7 +95,14 @@ player_loop:
 
 exit_player_loop:
     ## take computer's turn
-    jal computer_turn
+    move $a0, $s5
+    move $a1, $s3
+    move $a2, $s0
+    jal take_computer_turn
+
+    # update computer's next number & spots remaining on board
+    move $s3, $v0
+    move $s5, $v1
 
     ## display board to MMIO display
     move $a0, $s0
@@ -103,6 +113,7 @@ exit_player_loop:
 
 exit_gameplay_loop:
     ## calculate points - $v0 comp, $v1 p1, $a3 p2
+    move $a0, $s0
     jal calculate_scores
 
     ## display results
@@ -163,29 +174,30 @@ reset_board_done:
 #########################################################
 #########################################################
 
-## fills spots remaining, $s5, with correct value
-#  fills based on $s0, which holds game mode
-fill_spots_remaining:
-    beq $s0, 2, two_player_mode
+## get number of board spots based on player mode
+# $a0 - game mode
+# $v0 - # spots 
+get_num_spots:
+    beq $a0, 2, two_player_mode
 
     # 1 player mode
-    li $s5, 21
+    li $v0, 21
     jr $ra
 
 two_player_mode:
-    li $s5, 28
+    li $v0, 28
     jr $ra
 ## -----------------------------------------------------
 
 ## find first free cursor position
-#   finds based on board & game mode ($s0)
+# $a0 - game mode
 # $v0 - first free cursor
 find_first_free_cursor:
     # index (also byte offset) in board
     li $t0, 0
 find_cursor_pos_loop:
     # guard: if cursor goes above 42 or 56, some logic has gone wrong
-    beq $s0, 2, validate_two_player
+    beq $a0, 2, validate_two_player
 
     # validate 1 player
     bge $t0, 42, find_free_cursor_error
@@ -264,6 +276,7 @@ await_input:
     # manage user input - $v0 has resultant cursor
     move $a0, $t8   # pass input char
     move $a1, $s4   # put cursor in $a1
+    move $a2, $s0   # pass game mode
     jal get_cursor_from_input
 
     # if $v0 != $s4, erase number & reset circle
@@ -340,14 +353,16 @@ decrement_spots:
 # reads the board
 # $a0 - user input character
 # $a1 - current cursor
+# $a2 - game mode
 # $v0 - the resultant cursor
 get_cursor_from_input:
     ## subroutine prologue -- set up stack frame
-    addi $sp, $sp, -16
-    sw $fp, 12($sp)
-    sw $ra, 8($sp)
-    sw $a1, 4($sp)
-    sw $a0, 0($sp)
+    addi $sp, $sp, -20
+    sw $fp, 16($sp)
+    sw $ra, 12($sp)
+    sw $a2, 8($sp)  # game mode
+    sw $a1, 4($sp)  # current cursor
+    sw $a0, 0($sp)  # user input character
     move $fp, $sp
 
     # check left
@@ -375,22 +390,25 @@ get_cursor_from_input:
     j exit_get_cursor_from_input
 
 do_handle_left:
-    move $a0, $a1      # pass cursor
+    lw $a0, 4($sp)      # pass cursor
+    lw $a1, 8($sp)      # pass game mode
     jal handle_left
     j exit_get_cursor_from_input
 
 do_handle_right:
-    move $a0, $a1
+    lw $a0, 4($sp)
+    lw $a1, 8($sp)
     jal handle_right
     j exit_get_cursor_from_input
 
 do_handle_up:
-    move $a0, $a1
+    lw $a0, 4($sp)
     jal handle_up
     j exit_get_cursor_from_input
 
 do_handle_down:
-    move $a0, $a1
+    lw $a0, 4($sp)
+    lw $a1, 8($sp)
     jal handle_down
     j exit_get_cursor_from_input
 
@@ -399,15 +417,17 @@ exit_get_cursor_from_input:
     move $sp, $fp
     lw $a0, 0($sp)
     lw $a1, 4($sp)
-    lw $ra, 8($sp)
-    lw $fp, 12($sp)
-    addi $sp, $sp, 16
+    lw $a2, 8($sp)
+    lw $ra, 12($sp)
+    lw $fp, 16($sp)
+    addi $sp, $sp, 20
 
     jr $ra
 ## -----------------------------------------------------
 
 ## handle left
 # $a0 - cursor position
+# $a1 - game mode
 # $v0 - resultant cursor
 handle_left:
     # store current pos in $t0
@@ -416,7 +436,7 @@ handle_left:
     # shift left
     addi $t0, $t0, -1
     bgez $t0, left_loop
-    beq $s0, 2, wrap_2players
+    beq $a1, 2, wrap_2players
     li $t0, 20   # wrap around if needed- set $t0 to max idx
     j left_loop
 wrap_2players:
@@ -433,7 +453,7 @@ left_loop:
     # increment loop: move left
     addi $t0, $t0, -1
     bgez $t0, left_loop
-    beq $s0, 2, wrap_2players2
+    beq $a1, 2, wrap_2players2
 
     li $t0, 20   # wrap around if needed - set $t0 to max idx
     j left_loop
@@ -449,6 +469,7 @@ exit_left_loop:
 
 ## handle right
 # $a0 - cursor position
+# $a1 - game mode
 # $v0 - resultant cursor
 handle_right:
     # store current pos in $t0
@@ -456,7 +477,7 @@ handle_right:
 
     # shift right
     addi $t0, $t0, 1
-    beq $s0, 2, wrap_check_2players
+    beq $a1, 2, wrap_check_2players
     blt $t0, 21, right_loop
     j wrap
 wrap_check_2players:
@@ -475,7 +496,7 @@ right_loop:
     # increment loop: move right
     addi $t0, $t0, 1
     li $t1, 21
-    beq $s0, 2, wrap_check_2players2
+    beq $a1, 2, wrap_check_2players2
     blt $t0, $t1, right_loop
     j wrap2
 wrap_check_2players2:
@@ -596,6 +617,7 @@ exit_handle_up:
 
 ## handle down
 # $a0 - cursor position
+# $a1 - game mode
 # $v0 - resultant cursor
 handle_down:
     ## subroutine prologue -- build stack frame
@@ -609,7 +631,7 @@ handle_down:
     move $t0, $v0
 
     # if row is last, leave
-    beq $s0, 2, check_2player_lastrow
+    beq $a1, 2, check_2player_lastrow
     beq $t0, 6, down_failed
     j continue_handle_down
 check_2player_lastrow:
@@ -704,17 +726,25 @@ exit_handle_down:
 
 ## take the computer's turn. generate random spot, and
 #   fill it.
-computer_turn:
+# $a0 - number of spots remaining on board ($s5)
+# $a1 - computer's next number to draw ($s3)
+# $a2 - game mode ($s0)
+# $v0 - computer's new next number (new $s3)
+# $v1 - new number of spots remaining on board (new $s5)
+take_computer_turn:
     ## subroutine prologue -- set up stack frame
-    addi $sp, $sp, -8
-    sw $fp, 4($sp)
-    sw $ra, 0($sp)
+    addi $sp, $sp, -20
+    sw $fp, 16($sp)
+    sw $ra, 12($sp)
+    sw $a2, 8($sp)  # $s0 - game mode
+    sw $a1, 4($sp)  # $s3 - next number to draw
+    sw $a0, 0($sp)  # $s5 - number of spots remaining on board
     move $fp, $sp
     
     ## generate random number from spots remaining [0, spots left)
     li $v0, 42
     li $a0, 0
-    move $a1, $s5
+    move $a1, $a0
     syscall
 
     ## select next free spot
@@ -746,22 +776,24 @@ increment_computer_free_spot_loop:
     j computer_free_spot_loop
 
 exit_computer_free_spot_loop:
-    # add comp (0) and its next num ($s1) to board. $t0 holds cursor idx
+    # add comp (0) and its next num to board. $t0 holds cursor idx
     sll $t2, $t0, 1     # 2 * idx
     li $t1, 0
     sb $t1, board($t2)
 
     addi $t2, $t2, 1
-    sb $s3, board($t2)
+    lw $t3, 4($sp)
+    sb $t3, board($t2)
 
     ## draw number
-    move $a0, $s3   # num to draw
+    move $a0, $t3   # num to draw
     
     # get offset based on game mode
     move $a1, $t0
     sll $t1, $a1, 2
 
-    beq $s0, 2, use_two_player_offsets
+    lw $t3, 8($sp)
+    beq $t3, 2, use_two_player_offsets
 
     lw $a1, one_player_block_offsets($t1)
     j computer_call_draw_number
@@ -775,14 +807,17 @@ computer_call_draw_number:
     jal draw_number
 
     ## increment computer's next num, decrement spots remaining
-    addi $s3, $s3, 1
-    addi $s5, $s5, -1
+    lw $v0, 4($sp)
+    addi $v0, $v0, 1
+
+    lw $v1, 0($sp)
+    addi $v1, $v1, -1
 
     ## subroutine epilogue -- take down stack frame
     move $sp, $fp
-    lw $ra, 0($sp)
-    lw $fp, 4($sp)
-    addi $sp, $sp, 8
+    lw $ra, 12($sp)
+    lw $fp, 16($sp)
+    addi $sp, $sp, 20
 
     # exit subroutine
     jr $ra
@@ -795,13 +830,15 @@ newline: .asciiz"\n"
 
 ### CALCULATE SCORES ###
 # assumes there is at least 1 open spot
+# $a0 - game mode
 # $v0 - computer points
 # $v1 - player 1 points
 # $a3 - player 2 points
 calculate_scores:
     ## subroutine prologue -- set up stack frame
     # leave a spot to save index of open spot
-    addi $sp, $sp, -12
+    addi $sp, $sp, -16
+    sw $a0, 12($sp)
     sw $fp, 8($sp)
     sw $ra, 4($sp)
     move $fp, $sp
@@ -897,7 +934,8 @@ skip_left:
 
 skip_right:
     # check bottom right & left if NOT LAST ROW (r !=  or 7)
-    beq $s0, 2, set_last_row_2player
+    lw $t3, 12($sp)
+    beq $t3, 2, set_last_row_2player
     li $t3, 6
     j continue_check_bottom
 set_last_row_2player:
@@ -930,7 +968,7 @@ skip_bottom:
     move $sp, $fp
     lw $ra, 4($sp)
     lw $fp, 8($sp)
-    addi $sp, $sp, 12
+    addi $sp, $sp, 16
 
     jr $ra
 
@@ -938,6 +976,9 @@ skip_bottom:
 ## increment $v0 for computer, increment $v1 for player1, increment $a0 for player2
 # $a0 - user # (0, 1, or 2)
 # $a1 - value to add
+# $v0 - adds value to this register if user # = 0
+# $v1 - adds value to this register if user # = 1
+# $a3 - adds value to this register if user # = 2
 increment_scores:
     bnez $a0, check_player1or2
     # add to computer

@@ -1,6 +1,19 @@
 #-----------------------------------------------------------------------
 # block-assets.asm
-# Description: data file for block assets.
+# Description: contains offset arrays to draw the numbers 1-10 and
+#	a 31x31px circle on a game board--these offsets start from 0, and
+#	are intended to be added to the offsets in one_player_block_offsets
+#	or two_player_block_offsets to draw circles / numbers that are
+#	aligned with the respective game boards.
+#
+#	Also contains color constants to colorize the number and circle
+#	assets. The circle colors are used to colorize the circles on the
+#	game board and then return them to normal so the user can
+#	interactively select a spot on the game board. computer_color, 
+#	player1_color, and player2_color are used to colorize the numbers
+#	on the game board, color coded by player, and player1_color_temp
+#	and player2_color_temp are used to indicate temporary numbers on
+#	the game board while the user is still selecting a spot.
 #
 # Author: Asha Mavankal
 # Professor: Nhut Nguyen
@@ -8,18 +21,19 @@
 # Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
-
-.globl circle_offsets
 .globl number_offsets
+.globl circle_offsets
 
 .globl circle_color
 .globl selected_circle_color
+
 .globl computer_color
 .globl player1_color
 .globl player1_color_temp
 .globl player2_color
 .globl player2_color_temp
+
+.data
 
 ## colors
 circle_color:

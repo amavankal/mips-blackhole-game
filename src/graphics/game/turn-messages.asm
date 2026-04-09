@@ -1,13 +1,22 @@
 #-----------------------------------------------------------------------
-# diffs.asm holds image diffs
+# turn-messages.asm
+# Description: contains index-color pairs to draw turn messages
+#	("PLAYER 1'S TURN" and "PLAYER 2'S TURN") on the top left of the
+#	game board when a user is interactively selecting a spot on the
+#	board.
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
-
-.data
 
 .globl p1_turn_offsets
 .globl p1_turn_colors
 .globl p2_turn_offsets
 .globl p2_turn_colors
+
+.data
 
 ## Player 1 turn message
 p1_turn_offsets:

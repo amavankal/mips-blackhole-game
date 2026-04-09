@@ -1,16 +1,27 @@
 #-----------------------------------------------------------------------
-# diffs.asm holds image diffs
+# game-end-messages.asm
+# Description: contains index-color pairs to draw 4 game-end messages
+#	on the game board: " > BACK TO HOME", "PLAYER 1 WINS", "PLAYER 2
+#	WINS", and "COMPUTER WINS"; the latter three messages are colorized
+#	to match their theme colors defined in block-assets.asm.
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
 .globl back_home_offsets
 .globl back_home_colors
+
 .globl player1_win_offsets
 .globl player1_win_colors
 .globl player2_win_offsets
 .globl player2_win_colors
 .globl computer_win_offsets
 .globl computer_win_colors
+
+.data
 
 ## Back home message
 back_home_offsets:

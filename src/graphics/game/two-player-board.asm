@@ -1,12 +1,26 @@
 #-----------------------------------------------------------------------
-# 2 player game board diffs
+# two-player-board.asm
+# Description: contains index-color pairs to draw a 2-player game
+#	board (i.e. a "2 PLAYER V. COMPUTER" message at the top left, 
+#	and 28 white circles organized in a pyramid).
+#
+#	Also contains an array of 28 block offsets, each of which denotes 
+#	the top left corner of a bounding square for a circle in the game
+#	board (ordered top-down left-right). These are used to calculate 
+#	where to draw "block assets" on the game board, like numbers and
+#	circles, so that they align with the board's drawn circles.
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
-
-.data
 
 .globl two_player_block_offsets
 .globl two_player_board_offsets
 .globl two_player_board_colors
+
+.data
 
 ## block offsets--start of blocks in 2 player board (there's 28)
 two_player_block_offsets:

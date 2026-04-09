@@ -1,10 +1,17 @@
 #-----------------------------------------------------------------------
-# base.asm holds image data for base.png
+# game-base-frame.asm
+# Description: contains 65,536 word long color array used to draw the
+#	base frame for the game board (256px x 256px).
+#
+# Author: Asha Mavankal
+# Professor: Nhut Nguyen
+# Section: HN1
+# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
-.data
-
 .globl game_base_frame
+
+.data
 
 ## base frame for game
 game_base_frame:

@@ -4,9 +4,6 @@
 #   program to display data to the MMIO display register.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl display_number

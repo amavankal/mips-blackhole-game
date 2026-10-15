@@ -15,9 +15,6 @@
 #	(there are 28 circles on a 2-player game board).
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl two_player_block_offsets

@@ -1,11 +1,10 @@
 #-----------------------------------------------------------------------
 # driver.asm
-# Description: Entry point for Black Hole game program.
+# Description: Entry point for Black Hole game program. Owns printing
+#	tool setup instructions to the standard output, running the game
+#	loop, and storing the data for the Bitmap display board.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl graphics_board
@@ -13,7 +12,7 @@
 
 .data
 
-# graphics_board: 0x10010000. Reserved space used for MMIO
+# graphics_board: 0x10010000. Reserved space used for bitmap display
 graphics_board:
 	.space 262144 # reserve 256 px * 256 px * 4 bytes each for colors
 

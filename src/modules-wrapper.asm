@@ -1,23 +1,10 @@
 #-----------------------------------------------------------------------
 # modules-wrapper.asm
-# Description: brings modules subroutines in subdirectories up to root so
-#   that they can be assembled with "Assemble all files in directory"
-#   in MARS.
-#
-# Summaries of global subroutine labels:
-#   modules/display:
-#
-#   modules/game:
-#
-#   modules/gui:
-#
-#   modules/input:
-#        - 
+# Description: includes helper subroutines organized in modules/ in the
+#   project root so that they can be assembled with "Assemble all files
+#   in directory" in MARS.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 # MMIO Display modules

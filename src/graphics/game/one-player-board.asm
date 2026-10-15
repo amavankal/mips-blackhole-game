@@ -15,9 +15,6 @@
 #	(there are 21 circles on a 1-player game board).
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl one_player_board_offsets

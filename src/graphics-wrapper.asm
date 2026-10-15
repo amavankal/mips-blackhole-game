@@ -37,9 +37,6 @@
 #        - computer_win_colors       (color array to draw "Computer Wins" message)
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 # data for drawing the home animations--animations + selector arrows

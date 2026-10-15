@@ -4,9 +4,6 @@
 #	first home frame on the game board (256px x 256px).
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .data

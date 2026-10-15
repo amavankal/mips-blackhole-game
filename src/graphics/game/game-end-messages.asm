@@ -8,9 +8,6 @@
 #	The offsets arrays are all -1 terminated.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl back_home_offsets

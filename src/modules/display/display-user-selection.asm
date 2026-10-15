@@ -4,9 +4,6 @@
 #   the home menu to the MMIO display.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl display_user_selection

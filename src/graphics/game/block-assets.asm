@@ -18,9 +18,6 @@
 #	the game board while the user is still selecting a spot.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl number_offsets

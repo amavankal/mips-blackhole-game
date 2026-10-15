@@ -5,9 +5,6 @@
 #   selection (0 = exit, 1 = 1 player, or 2 = 2 player) in $v0.
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl home

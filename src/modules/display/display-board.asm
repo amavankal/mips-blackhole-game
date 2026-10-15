@@ -2,11 +2,19 @@
 # display-board.asm
 # Description: Contains subroutine that displays the board state to
 #   the MMIO Display.
+#   
+# Global subroutines in this file:
+#   - display_board (global)    
+#
+# Helper (local) subroutines
+#   - display_spaces
+#   - display_spot
+#   - display_temp_spot
+#
+# Dependendencies (modules that this module relies on):
+#   - display-utils.asm (display_string and display_number)
 #
 # Author: Asha Mavankal
-# Professor: Nhut Nguyen
-# Section: HN1
-# Due date: 04-07-2026
 #-----------------------------------------------------------------------
 
 .globl display_board

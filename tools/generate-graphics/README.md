@@ -1,8 +1,8 @@
 # Graphics Generation: PNG to ASM
 
-This directory contains the tool I created to convert the graphics I designed for this game from PNGs to .asm data files, pngToAsm, and the original graphics files. The graphics (in `assets`, `base-frames`, and `home-animation-frames`) were created with pixilart.com's drawing tools.
+This directory contains the CLI tool I created to convert the graphics I designed for this game from PNGs to .asm data files, `pngToAsm`, along with the original graphics files. The graphics (PNG files in `assets/`, `base-frames/`, and `home-animation-frames/`) were created with [pixilart.com](https://www.pixilart.com/)'s drawing tools.
 
-Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...
+Usage: `pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...`
 
     -A (--no-alpha): don't use alpha values. MARS can't read alpha values anyways, so in the end for ASM data file generation this option doesn't matter, but it affects whether the PNG is parsed with alpha values within the tool
 
@@ -12,5 +12,4 @@ Usage: pngToAsm [-A] [-m] [-o outdir] -d pngDir | png1.png ...
 
     -d (--src-dir): tells the tool to read PNG files in given source directory.
 
-
-The tool uses the C library libpng to parse PNGs into readable arrays of bytes. On Mac libpng can be installed with homebrew (brew install libpng), and the source file pngToAsm.c can be compiled with `gcc pngToASM.c -o pngToASM -I/opt/homebrew/include -L/opt/homebrew/lib -lpng`.
+This tool uses the C library libpng to parse PNGs into readable arrays of bytes. On MacOS libpng can be installed with homebrew (`brew install libpng`), and the source file pngToAsm.c can be compiled with `gcc pngToASM.c -o pngToASM -I/opt/homebrew/include -L/opt/homebrew/lib -lpng`.
